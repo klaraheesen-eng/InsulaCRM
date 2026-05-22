@@ -37,6 +37,7 @@ class LeadController extends Controller
                 $q->where('first_name', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('secondary_phone', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -191,6 +192,7 @@ class LeadController extends Controller
             'last_name' => $lead->last_name,
             'email' => $lead->email,
             'phone' => $lead->phone,
+            'secondary_phone' => $lead->secondary_phone,
             'source' => $lead->lead_source,
             'status' => $lead->status,
         ], auth()->user()->tenant_id);

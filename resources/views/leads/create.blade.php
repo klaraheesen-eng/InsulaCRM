@@ -31,17 +31,22 @@
                 </div>
             </div>
             <div class="row mb-3">
-                <div class="col-md-4">
-                    <label class="form-label">{{ __('Phone') }}</label>
-                    <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone') }}" placeholder="{{ __('(555) 123-4567') }}">
+                <div class="col-md-3">
+                    <label class="form-label">{{ __('Primary Phone') }}</label>
+                    <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone') }}" placeholder="{{ __('072 123 4567') }}">
                     @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <label class="form-label">{{ __('Secondary Phone') }}</label>
+                    <input type="tel" name="secondary_phone" class="form-control @error('secondary_phone') is-invalid @enderror" value="{{ old('secondary_phone') }}" placeholder="{{ __('Optional second number') }}">
+                    @error('secondary_phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-3">
                     <label class="form-label">{{ __('Email') }}</label>
                     <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}">
                     @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">{{ __('Timezone') }}</label>
                     <select name="timezone" class="form-select">
                         <option value="">{{ __('-- Auto-detect later --') }}</option>

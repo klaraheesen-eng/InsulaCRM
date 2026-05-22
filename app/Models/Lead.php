@@ -17,6 +17,7 @@ class Lead extends Model
         'first_name',
         'last_name',
         'phone',
+        'secondary_phone',
         'email',
         'lead_source',
         'campaign_id',

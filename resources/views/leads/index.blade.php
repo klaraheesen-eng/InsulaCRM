@@ -177,7 +177,10 @@
                             <span class="badge bg-purple-lt ms-1">{{ __('Stacked') }}</span>
                         @endif
                     </td>
-                    <td class="text-secondary">@if($lead->phone)<a href="tel:{{ $lead->phone }}" class="text-reset text-decoration-none">{{ $lead->phone }}</a>@else - @endif</td>
+                    <td class="text-secondary">
+                        @if($lead->phone)<a href="tel:{{ $lead->phone }}" class="text-reset text-decoration-none">{{ $lead->phone }}</a>@else - @endif
+                        @if($lead->secondary_phone)<div class="small text-secondary">{{ __('Secondary:') }} <a href="tel:{{ $lead->secondary_phone }}" class="text-reset text-decoration-none">{{ $lead->secondary_phone }}</a></div>@endif
+                    </td>
                     <td>
                         @php
                             $sourceColors = [

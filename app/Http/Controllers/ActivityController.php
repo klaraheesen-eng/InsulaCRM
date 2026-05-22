@@ -137,11 +137,15 @@ class ActivityController extends Controller
 
         $request->validate([
             'body' => 'required|string|max:65535',
+            'phone_field' => 'nullable|in:phone,secondary_phone',
         ]);
 
-        if (empty($lead->phone)) {
+        $phoneField = $request->input('phone_field', 'phone');
+        $selectedPhone = $phoneField === 'secondary_phone' ? $lead->secondary_phone : $lead->phone;
+
+        if (empty($selectedPhone)) {
             return redirect()->route('leads.show', $lead)
-                ->with('error', __('This lead does not have a phone number.'));
+                ->with('error', __('This lead does not have that phone number.'));
         }
 
         // Check DNC restrictions
@@ -153,7 +157,7 @@ class ActivityController extends Controller
 
         $tenant = auth()->user()->tenant;
         $body = $this->replaceMergeTags($request->body, $lead, $tenant);
-        $whatsappPhone = $this->formatWhatsAppPhone($lead->phone);
+        $whatsappPhone = $this->formatWhatsAppPhone($selectedPhone);
 
         if (!$whatsappPhone) {
             return redirect()->route('leads.show', $lead)
@@ -193,6 +197,7 @@ class ActivityController extends Controller
             '{full_name}',
             '{email}',
             '{phone}',
+            '{secondary_phone}',
             '{address}',
             '{company_name}',
         ], [
@@ -201,6 +206,7 @@ class ActivityController extends Controller
             $lead->full_name ?? '',
             $lead->email ?? '',
             $lead->phone ?? '',
+            $lead->secondary_phone ?? '',
             $property->address ?? '',
             $tenant->name ?? '',
         ], $content);

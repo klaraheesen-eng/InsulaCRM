@@ -72,6 +72,11 @@
                             @else
                                 -
                             @endif
+                            @if($lead->secondary_phone)
+                                <div class="text-secondary small mt-1">
+                                    {{ __('Secondary:') }} <a href="tel:{{ $lead->secondary_phone }}" class="text-reset">{{ $lead->secondary_phone }}</a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                     <div class="datagrid-item">
@@ -451,27 +456,25 @@
                     @endif
 
                     {{-- Contact --}}
-                    @if(($lead->phone && !$lead->do_not_contact) || ($lead->email && !$lead->do_not_contact))
+                    @if((($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact) || ($lead->email && !$lead->do_not_contact))
                     <small class="text-uppercase text-secondary fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ __('Contact') }}</small>
-                    @if($lead->phone && !$lead->do_not_contact)
-                    @php
-                        $whatsappPhone = preg_replace('/\D+/', '', $lead->phone);
-                        if (str_starts_with($whatsappPhone, '00')) {
-                            $whatsappPhone = substr($whatsappPhone, 2);
-                        } elseif (str_starts_with($whatsappPhone, '0')) {
-                            $whatsappPhone = '27' . substr($whatsappPhone, 1);
-                        }
-                    @endphp
+                    @if(($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact)
+                    @if($lead->phone)
                     <a href="tel:{{ $lead->phone }}" class="btn btn-success">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>
-                        {{ __('Call Lead') }}
+                        {{ __('Call Primary') }}
                     </a>
-                    @if($whatsappPhone)
+                    @endif
+                    @if($lead->secondary_phone)
+                    <a href="tel:{{ $lead->secondary_phone }}" class="btn btn-outline-success">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>
+                        {{ __('Call Secondary') }}
+                    </a>
+                    @endif
                     <button type="button" class="btn btn-success" style="background-color: #25d366; border-color: #25d366;" data-bs-toggle="modal" data-bs-target="#sendWhatsAppModal">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
                         {{ __('Send WhatsApp') }}
                     </button>
-                    @endif
                     @endif
                     @if($lead->email && !$lead->do_not_contact)
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#sendEmailModal">
@@ -1552,7 +1555,7 @@ if (window.trackRecentlyViewed) {
     </div>
 </div>
 @endif
-@if($lead->phone && !$lead->do_not_contact)
+@if(($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact)
 <!-- Send WhatsApp Modal -->
 <div class="modal modal-blur fade" id="sendWhatsAppModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
@@ -1569,7 +1572,15 @@ if (window.trackRecentlyViewed) {
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">{{ __('To') }}</label>
-                        <input type="text" class="form-control" value="{{ $lead->phone }}" disabled>
+                        @if($lead->phone && $lead->secondary_phone)
+                            <select name="phone_field" class="form-select">
+                                <option value="phone">{{ __('Primary') }} — {{ $lead->phone }}</option>
+                                <option value="secondary_phone">{{ __('Secondary') }} — {{ $lead->secondary_phone }}</option>
+                            </select>
+                        @else
+                            <input type="text" class="form-control" value="{{ $lead->phone ?: $lead->secondary_phone }}" disabled>
+                            <input type="hidden" name="phone_field" value="{{ $lead->phone ? 'phone' : 'secondary_phone' }}">
+                        @endif
                     </div>
                     @php
                         $whatsappTemplates = \Illuminate\Support\Facades\DB::table('whatsapp_templates')

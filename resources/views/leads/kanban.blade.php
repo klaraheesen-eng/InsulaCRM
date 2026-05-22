@@ -51,6 +51,7 @@
                 </div>
                 <div class="lead-meta">
                     @if($lead->phone) <a href="tel:{{ $lead->phone }}" class="text-reset text-decoration-none">{{ $lead->phone }}</a> @endif
+                    @if($lead->secondary_phone) <div class="small text-secondary">{{ __('Secondary:') }} <a href="tel:{{ $lead->secondary_phone }}" class="text-reset text-decoration-none">{{ $lead->secondary_phone }}</a></div> @endif
                     @if($lead->agent) &middot; {{ $lead->agent->name }} @endif
                 </div>
                 @if($lead->tags->count())
