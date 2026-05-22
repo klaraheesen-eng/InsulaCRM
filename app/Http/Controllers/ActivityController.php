@@ -126,8 +126,62 @@ class ActivityController extends Controller
             ->with('success', __('Email sent to :email.', ['email' => $lead->email]));
     }
 
+
+
     /**
-     * Replace merge tags in email content.
+     * Prepare a WhatsApp message and log the exact merged content as an activity.
+     */
+    public function sendWhatsApp(Request $request, Lead $lead)
+    {
+        $this->authorizeLead($lead);
+
+        $request->validate([
+            'body' => 'required|string|max:65535',
+        ]);
+
+        if (empty($lead->phone)) {
+            return redirect()->route('leads.show', $lead)
+                ->with('error', __('This lead does not have a phone number.'));
+        }
+
+        // Check DNC restrictions
+        $dncService = app(DncService::class);
+        $check = $dncService->canContact($lead);
+        if (!$check['allowed']) {
+            return redirect()->route('leads.show', $lead)->with('error', $check['reason']);
+        }
+
+        $tenant = auth()->user()->tenant;
+        $body = $this->replaceMergeTags($request->body, $lead, $tenant);
+        $whatsappPhone = $this->formatWhatsAppPhone($lead->phone);
+
+        if (!$whatsappPhone) {
+            return redirect()->route('leads.show', $lead)
+                ->with('error', __('This lead phone number cannot be used for WhatsApp.'));
+        }
+
+        // Log as activity before handing off to WhatsApp. The body is the exact
+        // merged text sent to wa.me, so the CRM keeps a durable record of what
+        // the agent intended to send.
+        $activity = Activity::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'agent_id' => auth()->id(),
+            'type' => 'whatsapp',
+            'subject' => __('WhatsApp message prepared'),
+            'body' => $body,
+            'logged_at' => now(),
+        ]);
+
+        app(MotivationScoreService::class)->recalculate($lead);
+        event(new ActivityLogged($activity));
+        Hooks::doAction('activity.logged', $activity);
+
+        return redirect()->away('https://wa.me/' . $whatsappPhone . '?text=' . rawurlencode($body));
+    }
+
+    /**
+     * Replace merge tags in outreach content.
      */
     private function replaceMergeTags(string $content, Lead $lead, $tenant): string
     {
@@ -150,6 +204,25 @@ class ActivityController extends Controller
             $property->address ?? '',
             $tenant->name ?? '',
         ], $content);
+    }
+
+
+
+    /**
+     * Format a phone number for wa.me links.
+     */
+    private function formatWhatsAppPhone(?string $phone): string
+    {
+        $whatsappPhone = preg_replace('/\D+/', '', (string) $phone);
+
+        if (str_starts_with($whatsappPhone, '00')) {
+            $whatsappPhone = substr($whatsappPhone, 2);
+        } elseif (str_starts_with($whatsappPhone, '0')) {
+            // Default local South African numbers to +27.
+            $whatsappPhone = '27' . substr($whatsappPhone, 1);
+        }
+
+        return $whatsappPhone;
     }
 
     /**

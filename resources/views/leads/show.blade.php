@@ -6,6 +6,8 @@
 @section('breadcrumbs')
 <li class="breadcrumb-item"><a href="{{ route('leads.index') }}">{{ __('Leads') }}</a></li>
 <li class="breadcrumb-item active" aria-current="page">{{ $lead->full_name }}</li>
+
+
 @endsection
 
 @section('content')
@@ -306,6 +308,7 @@
                                         'call' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-phone" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>',
                                         'sms' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-message" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 21v-13a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-9l-4 4"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg>',
                                         'email' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-mail" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>',
+                                        'whatsapp' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>',
                                         'voicemail' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-phone-incoming" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/><path d="M15 9l5 -5"/><path d="M15 5l0 4l4 0"/></svg>',
                                         'direct_mail' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-mailbox" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 21v-6.5a3.5 3.5 0 0 0 -7 0v6.5h18v-6a4 4 0 0 0 -4 -4h-10.5"/><path d="M12 11v-8h4l2 2l-2 2h-4"/><path d="M6 15h1"/></svg>',
                                         'note' => '<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-note" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="13" y1="20" x2="20" y2="13"/><path d="M13 20v-6a1 1 0 0 1 1 -1h6v-7a2 2 0 0 0 -2 -2h-12a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7"/></svg>',
@@ -316,6 +319,7 @@
                                         'call' => 'bg-green-lt',
                                         'sms' => 'bg-blue-lt',
                                         'email' => 'bg-yellow-lt',
+                                        'whatsapp' => 'bg-green-lt',
                                         'voicemail' => 'bg-orange-lt',
                                         'direct_mail' => 'bg-teal-lt',
                                         'note' => 'bg-secondary-lt',
@@ -463,10 +467,10 @@
                         {{ __('Call Lead') }}
                     </a>
                     @if($whatsappPhone)
-                    <a href="https://wa.me/{{ $whatsappPhone }}" target="_blank" rel="noopener" class="btn btn-success" style="background-color: #25d366; border-color: #25d366;">
+                    <button type="button" class="btn btn-success" style="background-color: #25d366; border-color: #25d366;" data-bs-toggle="modal" data-bs-target="#sendWhatsAppModal">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
                         {{ __('Send WhatsApp') }}
-                    </a>
+                    </button>
                     @endif
                     @endif
                     @if($lead->email && !$lead->do_not_contact)
@@ -1440,6 +1444,17 @@ if (templateSelect) {
     });
 }
 
+// Send WhatsApp modal: template loading
+var whatsappTemplateSelect = document.getElementById('whatsapp-template-select');
+if (whatsappTemplateSelect) {
+    whatsappTemplateSelect.addEventListener('change', function() {
+        var opt = this.options[this.selectedIndex];
+        if (opt.value) {
+            document.getElementById('whatsapp-body').value = opt.dataset.body || '';
+        }
+    });
+}
+
 // Track recently viewed
 if (window.trackRecentlyViewed) {
     window.trackRecentlyViewed('lead', {{ $lead->id }}, @json($lead->full_name), '{{ route("leads.show", $lead) }}');
@@ -1537,4 +1552,66 @@ if (window.trackRecentlyViewed) {
     </div>
 </div>
 @endif
+@if($lead->phone && !$lead->do_not_contact)
+<!-- Send WhatsApp Modal -->
+<div class="modal modal-blur fade" id="sendWhatsAppModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form action="{{ route('leads.sendWhatsApp', $lead) }}" method="POST" target="_blank">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+                        {{ __('Send WhatsApp to :name', ['name' => $lead->full_name]) }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('To') }}</label>
+                        <input type="text" class="form-control" value="{{ $lead->phone }}" disabled>
+                    </div>
+                    @php
+                        $whatsappTemplates = \Illuminate\Support\Facades\DB::table('whatsapp_templates')
+                            ->where('tenant_id', auth()->user()->tenant_id)
+                            ->orderBy('name')
+                            ->get();
+                    @endphp
+                    @if($whatsappTemplates->count())
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Template (optional)') }}</label>
+                        <select class="form-select" id="whatsapp-template-select">
+                            <option value="">{{ __('-- Select a template --') }}</option>
+                            @foreach($whatsappTemplates as $tpl)
+                            <option value="{{ $tpl->id }}" data-body="{{ e($tpl->body) }}">{{ $tpl->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    <div class="mb-3">
+                        <label class="form-label">{{ __('Message') }} <span class="text-danger">*</span></label>
+                        <textarea name="body" class="form-control" id="whatsapp-body" rows="8" required placeholder="{{ __('Write your WhatsApp message...') }}"></textarea>
+                        <small class="form-hint">{{ __('When you click Open WhatsApp, the exact merged message will be logged as an activity before WhatsApp opens.') }}</small>
+                    </div>
+                    <div class="alert alert-info py-2">
+                        <small>
+                            <strong>{{ __('Merge Tags:') }}</strong>
+                            <code>{first_name}</code> <code>{last_name}</code> <code>{full_name}</code> <code>{email}</code> <code>{phone}</code> <code>{address}</code> <code>{company_name}</code>
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button>
+                    <button type="submit" class="btn btn-success" style="background-color: #25d366; border-color: #25d366;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+                        {{ __('Open WhatsApp') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+
 @endsection

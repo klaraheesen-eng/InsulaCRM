@@ -32,6 +32,7 @@ use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\SsoController;
 use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\WhatsAppTemplateController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\ApiDocsController;
@@ -257,6 +258,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         // Activities on leads
         Route::post('/leads/{lead}/activities', [ActivityController::class, 'store'])->name('leads.activities.store');
         Route::post('/leads/{lead}/send-email', [ActivityController::class, 'sendEmail'])->name('leads.sendEmail');
+        Route::post('/leads/{lead}/send-whatsapp', [ActivityController::class, 'sendWhatsApp'])->name('leads.sendWhatsApp');
         Route::put('/activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
         Route::delete('/activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
 
@@ -524,6 +526,14 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::put('/settings/email-templates/{id}', [EmailTemplateController::class, 'update'])->name('email-templates.update');
         Route::delete('/settings/email-templates/{id}', [EmailTemplateController::class, 'destroy'])->name('email-templates.destroy');
         Route::get('/settings/email-templates/{id}/preview', [EmailTemplateController::class, 'preview'])->name('email-templates.preview');
+
+        // WhatsApp Templates
+        Route::get('/settings/whatsapp-templates', [WhatsAppTemplateController::class, 'index'])->name('whatsapp-templates.index');
+        Route::post('/settings/whatsapp-templates', [WhatsAppTemplateController::class, 'store'])->name('whatsapp-templates.store');
+        Route::get('/settings/whatsapp-templates/{id}/edit', [WhatsAppTemplateController::class, 'edit'])->name('whatsapp-templates.edit');
+        Route::put('/settings/whatsapp-templates/{id}', [WhatsAppTemplateController::class, 'update'])->name('whatsapp-templates.update');
+        Route::delete('/settings/whatsapp-templates/{id}', [WhatsAppTemplateController::class, 'destroy'])->name('whatsapp-templates.destroy');
+        Route::get('/settings/whatsapp-templates/{id}/preview', [WhatsAppTemplateController::class, 'preview'])->name('whatsapp-templates.preview');
 
         // API Documentation
         Route::get('/api-docs', [ApiDocsController::class, 'index'])->name('api-docs.index');

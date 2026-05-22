@@ -939,7 +939,7 @@ Content-Type: application/json</code></pre>
                 @include('settings.partials.email')
 
                 <hr class="my-4">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="mb-1">{{ __('Email Templates') }}</h4>
                         <p class="text-secondary mb-0">{{ __('Create and manage reusable email templates for sequences and manual outreach.') }}</p>
@@ -947,6 +947,17 @@ Content-Type: application/json</code></pre>
                     <a href="{{ route('email-templates.index') }}" class="btn btn-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z"/><path d="M3 7l9 6l9 -6"/></svg>
                         {{ __('Manage Email Templates') }}
+                    </a>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-1">{{ __('WhatsApp Templates') }}</h4>
+                        <p class="text-secondary mb-0">{{ __('Create and manage reusable WhatsApp templates with merge tags for manual outreach.') }}</p>
+                    </div>
+                    <a href="{{ route('whatsapp-templates.index') }}" class="btn btn-success" style="background-color: #25d366; border-color: #25d366;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+                        {{ __('Manage WhatsApp Templates') }}
                     </a>
                 </div>
             </div>
