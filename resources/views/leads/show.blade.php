@@ -455,6 +455,28 @@
                     <hr class="my-1">
                     @endif
 
+                    @if(($businessMode ?? 'wholesale') === 'realestate')
+                    @php
+                        $activeTransaction = $lead->deals->whereNotIn('stage', ['closed_won', 'closed_lost'])->sortByDesc('updated_at')->first();
+                    @endphp
+                    <small class="text-uppercase text-secondary fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ __('Listing') }}</small>
+                    @if($activeTransaction)
+                    <a href="{{ route('deals.show', $activeTransaction) }}" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/></svg>
+                        {{ __('Open Transaction') }}
+                    </a>
+                    @else
+                    <form method="POST" action="{{ route('leads.createTransaction', $lead) }}" onsubmit="return confirm('{{ __('Create a transaction at Listing Agreement stage for this lead?') }}')">
+                        @csrf
+                        <button type="submit" class="btn btn-primary w-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21h18"/><path d="M5 21v-14l8 -4v18"/><path d="M19 21v-10l-6 -4"/></svg>
+                            {{ __('Create Listing Transaction') }}
+                        </button>
+                    </form>
+                    @endif
+                    <hr class="my-1">
+                    @endif
+
                     {{-- Contact --}}
                     @if((($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact) || ($lead->email && !$lead->do_not_contact))
                     <small class="text-uppercase text-secondary fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ __('Contact') }}</small>

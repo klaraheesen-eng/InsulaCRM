@@ -252,6 +252,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::get('/leads/kanban', [LeadKanbanController::class, 'index'])->name('leads.kanban');
         Route::post('/leads/bulk-action', [LeadController::class, 'bulkAction'])->name('leads.bulkAction');
         Route::resource('leads', LeadController::class);
+        Route::post('/leads/{lead}/transaction', [LeadController::class, 'createTransaction'])->name('leads.createTransaction');
         Route::patch('/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.updateStatus');
         Route::post('/leads/{lead}/claim', [LeadController::class, 'claim'])->name('leads.claim');
 

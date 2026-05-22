@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use App\Events\LeadStatusChanged;
 use App\Facades\Hooks;
 use App\Http\Requests\LeadRequest;
+use App\Models\Activity;
 use App\Models\AuditLog;
+use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadClaim;
 use App\Models\LeadPhoto;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Services\BusinessModeService;
 use App\Services\CustomFieldService;
 use App\Services\AssignmentHistoryService;
 use App\Services\MotivationScoreService;
@@ -215,6 +218,67 @@ class LeadController extends Controller
         $sequences = \App\Models\Sequence::where('is_active', true)->get();
         $assignmentHistory = app(AssignmentHistoryService::class)->getHistory($lead);
         return view('leads.show', compact('lead', 'sequences', 'assignmentHistory'));
+    }
+
+    public function createTransaction(Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        if (! BusinessModeService::isRealEstate(auth()->user()->tenant)) {
+            return redirect()->route('leads.show', $lead)
+                ->with('error', __('Listing transactions are only available in real estate mode.'));
+        }
+
+        $existingDeal = $lead->deals()
+            ->whereNotIn('stage', ['closed_won', 'closed_lost'])
+            ->latest('updated_at')
+            ->first();
+
+        if ($existingDeal) {
+            return redirect()->route('deals.show', $existingDeal)
+                ->with('info', __('This lead already has an active transaction.'));
+        }
+
+        $propertyAddress = $lead->property?->address;
+        $dealTitle = $propertyAddress
+            ? $propertyAddress . ' - Listing Agreement'
+            : $lead->full_name . ' - Listing Agreement';
+
+        $deal = Deal::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'agent_id' => $lead->agent_id ?: (auth()->user()->isAgent() ? auth()->id() : null),
+            'title' => $dealTitle,
+            'stage' => 'listing_agreement',
+            'stage_changed_at' => now(),
+            'listing_date' => now()->toDateString(),
+        ]);
+
+        $oldStatus = $lead->status;
+        if (! in_array($lead->status, ['active_client', 'closed_won', 'closed_lost', 'dead'], true)) {
+            $lead->update(['status' => 'active_client']);
+            event(new LeadStatusChanged($lead, $oldStatus));
+            Hooks::doAction('lead.status_changed', $lead, $oldStatus);
+        }
+
+        Activity::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'deal_id' => $deal->id,
+            'agent_id' => auth()->id(),
+            'type' => 'stage_change',
+            'subject' => __('Transaction created'),
+            'body' => __('Lead converted to a transaction at Listing Agreement stage.'),
+            'logged_at' => now(),
+        ]);
+
+        AuditLog::log('deal.created_from_lead', $deal, null, [
+            'lead_id' => $lead->id,
+            'stage' => 'listing_agreement',
+        ]);
+
+        return redirect()->route('deals.show', $deal)
+            ->with('success', __('Transaction created at Listing Agreement stage.'));
     }
 
     public function edit(Lead $lead)
