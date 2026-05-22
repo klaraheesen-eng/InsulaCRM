@@ -455,7 +455,6 @@
                     <hr class="my-1">
                     @endif
 
-                    @if(($businessMode ?? 'wholesale') === 'realestate')
                     @php
                         $activeTransaction = $lead->deals->whereNotIn('stage', ['closed_won', 'closed_lost'])->sortByDesc('updated_at')->first();
                     @endphp
@@ -475,7 +474,6 @@
                     </form>
                     @endif
                     <hr class="my-1">
-                    @endif
 
                     {{-- Contact --}}
                     @if((($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact) || ($lead->email && !$lead->do_not_contact))
