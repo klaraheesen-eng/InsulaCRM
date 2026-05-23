@@ -145,7 +145,7 @@
                             <label class="form-label">{{ __('Currency') }}</label>
                             <select name="currency" class="form-select">
                                 @foreach(\Fmt::currencies() as $code => $label)
-                                    <option value="{{ $code }}" {{ ($tenant->currency ?? 'USD') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                                    <option value="{{ $code }}" {{ ($tenant->currency ?? 'ZAR') === $code ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -339,7 +339,7 @@
                     <div class="table-responsive">
                         <table class="table table-vcenter">
                             <thead>
-                                <tr><th>{{ $businessMode === 'realestate' ? __('Source') : __('Lead Source') }}</th><th style="width: 200px;">{{ __('Monthly Budget ($)') }}</th></tr>
+                                <tr><th>{{ $businessMode === 'realestate' ? __('Source') : __('Lead Source') }}</th><th style="width: 200px;">{{ __('Monthly Budget') }} ({{ Fmt::currencyCode() }})</th></tr>
                             </thead>
                             <tbody>
                                 @foreach(\App\Services\CustomFieldService::getOptions('lead_source', $tenant) as $source => $label)

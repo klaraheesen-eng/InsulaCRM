@@ -10,7 +10,7 @@
     </div>
     <div class="card-body">
         <div class="mb-2">
-            <label class="form-label">{{ __('Sale Price ($)') }}</label>
+            <label class="form-label">{{ __('Sale Price') }} ({{ Fmt::currencyCode() }})</label>
             <input type="number" class="form-control form-control-sm" id="calc-sale-price" step="0.01" min="0" value="{{ $deal->contract_price ?? '' }}">
         </div>
         <div class="mb-2">
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             return new Intl.NumberFormat(jsLocale, { style: 'currency', currency: currencyCode, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
         } catch (e) {
-            return '$' + value.toFixed(2);
+            return '{{ Fmt::currencySymbol() }}' + value.toFixed(2);
         }
     }
 

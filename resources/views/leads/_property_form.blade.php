@@ -164,7 +164,7 @@
                 <div class="col-md-3">
                     <label class="form-label">{{ __('MAO') }}</label>
                     <div class="form-control-plaintext">
-                        <strong id="mao-display" class="h4">$0.00</strong>
+                        <strong id="mao-display" class="h4">{{ Fmt::currencySymbol() }}0.00</strong>
                         <br><small class="text-secondary">{{ __('(ARV x 70%) - Repairs') }}</small>
                     </div>
                 </div>
@@ -181,7 +181,7 @@
                 <div class="col-md-4">
                     <label class="form-label">{{ __('Assignment Fee') }}</label>
                     <div class="form-control-plaintext">
-                        <strong id="assignment-fee" class="h4">$0.00</strong>
+                        <strong id="assignment-fee" class="h4">{{ Fmt::currencySymbol() }}0.00</strong>
                     </div>
                 </div>
             </div>

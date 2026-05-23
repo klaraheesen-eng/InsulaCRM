@@ -103,7 +103,7 @@ class TenantFormatHelper
     public static function currency(float|int|null $amount, int $decimals = 2): string
     {
         $tenant = static::tenant();
-        $code = $tenant->currency ?? 'USD';
+        $code = $tenant->currency ?? 'ZAR';
         $symbol = static::$currencySymbols[$code] ?? $code;
 
         if (in_array($code, static::$zeroDecimalCurrencies)) {
@@ -119,7 +119,7 @@ class TenantFormatHelper
     public static function currencySymbol(): string
     {
         $tenant = static::tenant();
-        $code = $tenant->currency ?? 'USD';
+        $code = $tenant->currency ?? 'ZAR';
         return static::$currencySymbols[$code] ?? $code;
     }
 
@@ -129,7 +129,7 @@ class TenantFormatHelper
     public static function currencyCode(): string
     {
         $tenant = static::tenant();
-        return $tenant->currency ?? 'USD';
+        return $tenant->currency ?? 'ZAR';
     }
 
     /**

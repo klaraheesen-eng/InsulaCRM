@@ -481,16 +481,16 @@
             <div class="card-body">
                 <form id="deal-edit-form">
                     <div class="mb-2">
-                        <label class="form-label">{{ __('Contract Price ($)') }}</label>
+                        <label class="form-label">{{ __('Contract Price') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="contract_price" class="form-control form-control-sm" step="0.01" value="{{ $deal->contract_price }}">
                     </div>
                     @if($businessMode === 'wholesale')
                     <div class="mb-2">
-                        <label class="form-label">{{ __('Assignment Fee ($)') }}</label>
+                        <label class="form-label">{{ __('Assignment Fee') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="assignment_fee" class="form-control form-control-sm" step="0.01" value="{{ $deal->assignment_fee }}">
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">{{ __('Earnest Money ($)') }}</label>
+                        <label class="form-label">{{ __('Earnest Money') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="earnest_money" class="form-control form-control-sm" step="0.01" value="{{ $deal->earnest_money }}">
                     </div>
                     <div class="mb-2">
@@ -507,7 +507,7 @@
                         <input type="number" name="buyer_commission_pct" class="form-control form-control-sm" step="0.01" min="0" max="100" value="{{ $deal->buyer_commission_pct }}">
                     </div>
                     <div class="mb-2">
-                        <label class="form-label">{{ __('Total Commission ($)') }}</label>
+                        <label class="form-label">{{ __('Total Commission') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="total_commission" class="form-control form-control-sm" step="0.01" value="{{ $deal->total_commission }}">
                     </div>
                     <div class="mb-2">
@@ -623,7 +623,7 @@ if (window.trackRecentlyViewed) {
     var briefingLinks = document.getElementById('deal-briefing-links');
     if (!briefingText) return;
     var csrfTkn = document.querySelector('meta[name="csrf-token"]').content;
-    var fmtCur = function(v) { return v ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v) : ''; };
+    var fmtCur = function(v) { return v ? new Intl.NumberFormat('{{ Fmt::jsLocale() }}', { style: 'currency', currency: '{{ Fmt::currencyCode() }}', maximumFractionDigits: 0 }).format(v) : ''; };
 
     var typeLabels = { deal: '{{ ($businessMode ?? "wholesale") === "realestate" ? __("Transaction") : __("Deal") }}', lead: '{{ __("Lead") }}', buyer: '{{ ($businessMode ?? "wholesale") === "realestate" ? __("Client") : __("Buyer") }}', property: '{{ __("Property") }}' };
     var typeColors = { deal: 'bg-blue-lt', lead: 'bg-green-lt', buyer: 'bg-orange-lt', property: 'bg-cyan-lt' };

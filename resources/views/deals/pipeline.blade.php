@@ -593,16 +593,16 @@
                         <div>${deal.agent ? deal.agent.name : '-'}</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ __('Contract Price ($)') }}</label>
+                        <label class="form-label">{{ __('Contract Price') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="contract_price" class="form-control" step="0.01" value="${deal.contract_price || ''}">
                     </div>
                     @if($businessMode === 'wholesale')
                     <div class="mb-3">
-                        <label class="form-label">{{ __('Assignment Fee ($)') }}</label>
+                        <label class="form-label">{{ __('Assignment Fee') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="assignment_fee" class="form-control" step="0.01" value="${deal.assignment_fee || ''}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ __('Earnest Money ($)') }}</label>
+                        <label class="form-label">{{ __('Earnest Money') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="earnest_money" class="form-control" step="0.01" value="${deal.earnest_money || ''}">
                     </div>
                     @else
@@ -615,7 +615,7 @@
                         <input type="number" name="buyer_commission_pct" class="form-control" step="0.01" min="0" max="100" value="${deal.buyer_commission_pct || ''}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{{ __('Total Commission ($)') }}</label>
+                        <label class="form-label">{{ __('Total Commission') }} ({{ Fmt::currencyCode() }})</label>
                         <input type="number" name="total_commission" class="form-control" step="0.01" value="${deal.total_commission || ''}">
                     </div>
                     <div class="mb-3">
@@ -806,12 +806,12 @@
         // Hide the quick-edit button while editing
         btn.style.display = 'none';
 
-        var feeLabel = '{{ $businessMode === "realestate" ? __("Total Commission") : __("Assignment Fee") }}';
+        var feeLabel = '{{ $businessMode === "realestate" ? __("Total Commission") : __("Assignment Fee") }} ({{ Fmt::currencyCode() }})';
         var feeName = feeField;
 
         cardBody.innerHTML =
             '<div class="quick-edit-form" onclick="event.stopPropagation()">' +
-            '<div class="mb-2"><label class="form-label form-label-sm mb-0">{{ __("Contract Price") }}</label>' +
+            '<div class="mb-2"><label class="form-label form-label-sm mb-0">{{ __("Contract Price") }} ({{ Fmt::currencyCode() }})</label>' +
             '<input type="number" class="form-control form-control-sm" name="contract_price" value="' + currentPrice + '" step="0.01"></div>' +
             '<div class="mb-2"><label class="form-label form-label-sm mb-0">' + feeLabel + '</label>' +
             '<input type="number" class="form-control form-control-sm" name="' + feeName + '" value="' + currentFee + '" step="0.01"></div>' +
