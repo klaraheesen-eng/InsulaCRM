@@ -133,6 +133,17 @@
                         </li>
                         @endif
 
+                        @if(auth()->user()->canManageLeads() || auth()->user()->isFieldScout())
+                        <li class="nav-item {{ request()->is('scout*') ? 'active' : '' }}">
+                            <a class="nav-link" href="{{ route('scout.index') }}">
+                                <span class="nav-link-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>
+                                </span>
+                                <span class="nav-link-title">{{ __('Scout Utility') }}</span>
+                            </a>
+                        </li>
+                        @endif
+
                         @unless(auth()->user()->isDispositionAgent())
                         <li class="nav-item {{ request()->is('properties*') ? 'active' : '' }}">
                             <a class="nav-link" href="{{ route('properties.index') }}">

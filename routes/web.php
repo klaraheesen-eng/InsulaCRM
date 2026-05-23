@@ -26,6 +26,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\LeadKanbanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\ScoutController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\UpdateController;
@@ -174,6 +175,12 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
     Route::middleware(['role:admin,agent,listing_agent,buyers_agent', 'mode:realestate'])->group(function () {
         Route::get('/listings', [ListingDashboardController::class, 'index'])->name('listings.index');
     });
+
+    // ── Scout Utility (mobile field scouting) ────────────────────────
+    Route::get('/scout', [ScoutController::class, 'index'])->name('scout.index');
+    Route::post('/scout/session', [ScoutController::class, 'startSession'])->name('scout.session');
+    Route::post('/scout/points', [ScoutController::class, 'storePoint'])->name('scout.points.store');
+    Route::post('/scout/capture-lead', [ScoutController::class, 'captureLead'])->name('scout.captureLead');
 
     // ── Global Search (all roles) ────────────────────────
     Route::get('/search', [SearchController::class, 'search'])->name('search');
