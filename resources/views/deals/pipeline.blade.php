@@ -678,6 +678,37 @@
                 html += '<p class="text-secondary">{{ __('No documents uploaded.') }}</p>';
             }
 
+            if (deal.lead && deal.lead.activities && deal.lead.activities.length) {
+                const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[char]));
+                const activityLabel = (type) => esc(String(type || 'note').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
+                const activityTime = (activity) => activity.logged_at || activity.created_at ? new Date(activity.logged_at || activity.created_at).toLocaleString() : '';
+                const activityColors = {call: 'bg-green-lt', sms: 'bg-blue-lt', email: 'bg-yellow-lt', note: 'bg-secondary-lt', meeting: 'bg-purple-lt', stage_change: 'bg-cyan-lt'};
+                html += '<hr><h4>{{ __('Lead Activity') }}</h4><div class="list-group list-group-flush">';
+                [...deal.lead.activities]
+                    .sort((a, b) => new Date(b.logged_at || b.created_at || 0) - new Date(a.logged_at || a.created_at || 0))
+                    .slice(0, 10)
+                    .forEach(activity => {
+                        const color = activityColors[activity.type] || 'bg-secondary-lt';
+                        const initial = esc(String(activity.type || 'n').charAt(0).toUpperCase());
+                        html += `<div class="list-group-item px-0">
+                            <div class="d-flex gap-2">
+                                <span class="avatar avatar-sm ${color}">${initial}</span>
+                                <div class="flex-fill">
+                                    <div><strong>${activityLabel(activity.type)}</strong>${activity.subject ? ' - ' + esc(activity.subject) : ''}</div>
+                                    ${activity.body ? `<div class="text-secondary small" style="white-space:pre-line;">${esc(activity.body)}</div>` : ''}
+                                    <div class="text-secondary small">${esc(activity.agent ? activity.agent.name : '')}${activity.agent && activityTime(activity) ? ' · ' : ''}${esc(activityTime(activity))}</div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                if (deal.lead.activities.length > 10) {
+                    html += `<a href="{{ url('/leads') }}/${deal.lead.id}#activity-section" class="list-group-item list-group-item-action text-primary">{{ __('View all lead activity') }}</a>`;
+                }
+                html += '</div>';
+            } else if (deal.lead) {
+                html += '<hr><h4>{{ __('Lead Activity') }}</h4><p class="text-secondary">{{ __('No lead activities logged yet.') }}</p>';
+            }
+
             if (deal.buyer_matches && deal.buyer_matches.length) {
                 html += '<hr><h4>{{ __('Matched') }} {{ $modeTerms['buyer_label'] ?? __('Buyers') }}</h4><div class="list-group list-group-flush">';
                 deal.buyer_matches.forEach(m => {

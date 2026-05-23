@@ -341,6 +341,53 @@
                 @endif
             </div>
         </div>
+
+        @if($deal->lead)
+        <!-- Lead Activity Context -->
+        <div class="card mb-3" id="lead-activity-section">
+            <div class="card-header">
+                <h3 class="card-title">{{ __('Lead Activity') }}</h3>
+                <div class="card-actions">
+                    <a href="{{ route('leads.show', $deal->lead) }}#activity-section" class="btn btn-sm btn-outline-primary">{{ __('Open Lead') }}</a>
+                </div>
+            </div>
+            <div class="card-body">
+                @if($deal->lead->activities->count())
+                <div class="list-group list-group-flush">
+                    @foreach($deal->lead->activities->sortByDesc('logged_at')->take(10) as $activity)
+                    <div class="list-group-item px-0">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                @php
+                                    $leadActColors = ['call'=>'bg-green-lt','sms'=>'bg-blue-lt','email'=>'bg-yellow-lt','note'=>'bg-secondary-lt','meeting'=>'bg-purple-lt','stage_change'=>'bg-cyan-lt'];
+                                @endphp
+                                <span class="avatar avatar-sm {{ $leadActColors[$activity->type] ?? 'bg-secondary-lt' }}">
+                                    {{ strtoupper(substr($activity->type, 0, 1)) }}
+                                </span>
+                            </div>
+                            <div class="col">
+                                <div class="text-truncate">
+                                    <strong>{{ __(ucwords(str_replace('_', ' ', $activity->type))) }}</strong>
+                                    @if($activity->subject) - {{ $activity->subject }} @endif
+                                </div>
+                                @if($activity->body)
+                                <div class="text-secondary small" style="white-space:pre-line;">{{ $activity->body }}</div>
+                                @endif
+                                <div class="text-secondary small">
+                                    {{ $activity->agent->name ?? '' }} &middot; {{ $activity->logged_at ? $activity->logged_at->diffForHumans() : $activity->created_at->diffForHumans() }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+                @else
+                <p class="text-secondary">{{ __('No lead activities logged yet.') }}</p>
+                @endif
+            </div>
+        </div>
+        @endif
+
         @if(($businessMode ?? 'wholesale') === 'realestate')
             @include('deals._transaction_checklist', ['deal' => $deal])
             @include('deals._offers', ['deal' => $deal])
