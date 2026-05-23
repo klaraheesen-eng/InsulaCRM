@@ -113,6 +113,12 @@
             <div class="col-auto">
                 <button type="submit" class="btn btn-outline-primary">{{ __('Filter') }}</button>
             </div>
+            <div class="col-auto">
+                @php $newestFirst = request('sort', 'created_at') === 'created_at' && request('direction', 'desc') === 'desc'; @endphp
+                <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => $newestFirst ? 'asc' : 'desc']) }}" class="btn btn-outline-secondary">
+                    {{ $newestFirst ? __('Sort Oldest First') : __('Sort Newest First') }}
+                </a>
+            </div>
             @if(request()->hasAny(['search', 'source', 'status', 'temperature', 'agent_id', 'stacked', 'dnc']))
             <div class="col-md-1">
                 <a href="{{ route('leads.index') }}" class="btn btn-outline-secondary w-100">{{ __('Clear') }}</a>
