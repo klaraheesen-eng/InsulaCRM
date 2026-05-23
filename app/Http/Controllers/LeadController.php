@@ -87,7 +87,8 @@ class LeadController extends Controller
             }
         }
 
-        $leads = $query->latest()->paginate(25);
+        $totalLeads = (clone $query)->count();
+        $leads = $query->latest()->paginate(max($totalLeads, 1));
 
         $agents = !auth()->user()->isAgent() ? $this->getAgents() : collect();
 
