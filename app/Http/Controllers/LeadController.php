@@ -29,7 +29,7 @@ class LeadController extends Controller
     {
         $this->authorize('viewAny', Lead::class);
 
-        $query = Lead::with('agent')->withCount('lists');
+        $query = Lead::with(['agent', 'property'])->withCount('lists');
 
         if (auth()->user()->isAgent()) {
             $query->where('agent_id', auth()->id());
