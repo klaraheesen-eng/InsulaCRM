@@ -47,6 +47,11 @@
                     <input type="url" name="existing_listing_link" class="form-control @error('existing_listing_link') is-invalid @enderror" value="{{ old('existing_listing_link') }}" placeholder="https://www.property24.com/...">
                     @error('existing_listing_link') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ __('Listing Price') }} ({{ Fmt::currencyCode() }})</label>
+                    <input type="number" name="listing_price" class="form-control @error('listing_price') is-invalid @enderror" value="{{ old('listing_price') }}" min="0" step="0.01" placeholder="{{ Fmt::currencySymbol() }}">
+                    @error('listing_price') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
             </div>
         </div>
     </div>

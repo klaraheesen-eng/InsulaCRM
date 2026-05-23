@@ -28,6 +28,7 @@ class LeadRequest extends FormRequest
             'property_state' => 'nullable|string|max:100',
             'property_zip_code' => 'nullable|string|max:20',
             'existing_listing_link' => 'nullable|string|max:2048',
+            'listing_price' => 'nullable|numeric|min:0|max:999999999999.99',
             'phone' => 'nullable|string|max:50',
             'secondary_phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',

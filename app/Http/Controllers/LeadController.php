@@ -175,8 +175,9 @@ class LeadController extends Controller
             'state' => $data['property_state'] ?? null,
             'zip_code' => $data['property_zip_code'] ?? null,
             'existing_listing_link' => $data['existing_listing_link'] ?? null,
+            'listing_price' => $data['listing_price'] ?? null,
         ];
-        unset($data['property_address'], $data['property_city'], $data['property_state'], $data['property_zip_code'], $data['existing_listing_link']);
+        unset($data['property_address'], $data['property_city'], $data['property_state'], $data['property_zip_code'], $data['existing_listing_link'], $data['listing_price']);
 
         $data['first_name'] = filled($data['first_name'] ?? null) ? $data['first_name'] : 'Unknown';
         $data['last_name'] = filled($data['last_name'] ?? null) ? $data['last_name'] : 'Owner';
@@ -186,9 +187,14 @@ class LeadController extends Controller
         if (isset($data['custom_fields'])) {
             $data['custom_fields'] = array_filter($data['custom_fields'], fn($v) => $v !== null && $v !== '');
         }
-        if (filled($propertyData['existing_listing_link'] ?? null)) {
+        if (filled($propertyData['existing_listing_link'] ?? null) || filled($propertyData['listing_price'] ?? null)) {
             $data['custom_fields'] = $data['custom_fields'] ?? [];
-            $data['custom_fields']['existing_listing_link'] = $propertyData['existing_listing_link'];
+            if (filled($propertyData['existing_listing_link'] ?? null)) {
+                $data['custom_fields']['existing_listing_link'] = $propertyData['existing_listing_link'];
+            }
+            if (filled($propertyData['listing_price'] ?? null)) {
+                $data['custom_fields']['listing_price'] = $propertyData['listing_price'];
+            }
         }
 
         if (auth()->user()->isAgent()) {
@@ -206,6 +212,7 @@ class LeadController extends Controller
                 'state' => $propertyData['state'] ?: 'Gauteng',
                 'zip_code' => $propertyData['zip_code'] ?: '',
                 'property_type' => 'house',
+                'list_price' => $propertyData['listing_price'] ?? null,
                 'listing_status' => filled($propertyData['existing_listing_link'] ?? null) ? 'active' : null,
                 'notes' => $propertyData['existing_listing_link'] ?? null,
             ]);
