@@ -145,13 +145,21 @@
         };
     @endphp
     <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table" style="min-width: 1850px;">
             <thead>
                 <tr>
                     <th class="w-1"><input type="checkbox" id="select-all" class="form-check-input" aria-label="{{ __('Select all leads') }}"></th>
                     <th class="w-1"><a href="{{ $sortUrl('id') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('ID') }}{!! $sortArrow('id') !!}</a></th>
                     <th><a href="{{ $sortUrl('first_name') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Name') }}{!! $sortArrow('first_name') !!}</a></th>
                     <th>{{ __('Phone') }}</th>
+                    <th>{{ __('Phone Contact 1') }}</th>
+                    <th>{{ __('Notes') }}</th>
+                    <th>{{ __('WhatsApp Intro Sent') }}</th>
+                    <th>{{ __('Follow Up Date') }}</th>
+                    <th>{{ __('Listing Appointment') }}</th>
+                    <th>{{ __('Listing Notes') }}</th>
+                    <th>{{ __('Existing Listing') }}</th>
+                    <th>{{ __('Listing Price') }}</th>
                     <th><a href="{{ $sortUrl('lead_source') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Source') }}{!! $sortArrow('lead_source') !!}</a></th>
                     <th><a href="{{ $sortUrl('status') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Status') }}{!! $sortArrow('status') !!}</a></th>
                     <th><a href="{{ $sortUrl('temperature') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Temp') }}{!! $sortArrow('temperature') !!}</a></th>
@@ -165,6 +173,7 @@
             </thead>
             <tbody>
                 @forelse($leads as $lead)
+                @php $leadListFields = $lead->custom_fields ?? []; @endphp
                 <tr>
                     <td><input type="checkbox" class="form-check-input lead-checkbox" value="{{ $lead->id }}" aria-label="{{ __('Select') }} {{ $lead->full_name }}"></td>
                     <td class="text-secondary">{{ $lead->id }}</td>
@@ -180,6 +189,35 @@
                     <td class="text-secondary">
                         @if($lead->phone)<a href="tel:{{ $lead->phone }}" class="text-reset text-decoration-none">{{ $lead->phone }}</a>@else - @endif
                         @if($lead->secondary_phone)<div class="small text-secondary">{{ __('Secondary:') }} <a href="tel:{{ $lead->secondary_phone }}" class="text-reset text-decoration-none">{{ $lead->secondary_phone }}</a></div>@endif
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" class="form-check-input lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="phone_contact_1" {{ !empty($leadListFields['phone_contact_1']) ? 'checked' : '' }} aria-label="{{ __('Phone contact 1 for') }} {{ $lead->full_name }}">
+                    </td>
+                    <td>
+                        <textarea class="form-control form-control-sm lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="phone_contact_notes" rows="1" style="min-width: 180px;" placeholder="{{ __('Notes...') }}">{{ $leadListFields['phone_contact_notes'] ?? '' }}</textarea>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" class="form-check-input lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="whatsapp_intro_sent" {{ !empty($leadListFields['whatsapp_intro_sent']) ? 'checked' : '' }} aria-label="{{ __('WhatsApp intro sent for') }} {{ $lead->full_name }}">
+                    </td>
+                    <td>
+                        <input type="date" class="form-control form-control-sm lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="follow_up_date" value="{{ $leadListFields['follow_up_date'] ?? '' }}" style="min-width: 140px;">
+                    </td>
+                    <td>
+                        <input type="date" class="form-control form-control-sm lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="listing_appointment_date" value="{{ $leadListFields['listing_appointment_date'] ?? '' }}" style="min-width: 140px;">
+                    </td>
+                    <td>
+                        <textarea class="form-control form-control-sm lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="listing_notes" rows="1" style="min-width: 180px;" placeholder="{{ __('Notes...') }}">{{ $leadListFields['listing_notes'] ?? '' }}</textarea>
+                    </td>
+                    <td>
+                        <div class="input-group input-group-sm" style="min-width: 220px;">
+                            <input type="url" class="form-control lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="existing_listing_link" value="{{ $leadListFields['existing_listing_link'] ?? '' }}" placeholder="https://...">
+                            @if(!empty($leadListFields['existing_listing_link']))
+                            <a href="{{ $leadListFields['existing_listing_link'] }}" target="_blank" rel="noopener" class="btn btn-outline-primary">{{ __('Open') }}</a>
+                            @endif
+                        </div>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm lead-custom-field" data-lead-id="{{ $lead->id }}" data-field="listing_price" value="{{ $leadListFields['listing_price'] ?? '' }}" min="0" step="0.01" style="min-width: 130px;" placeholder="{{ Fmt::currencySymbol() }}">
                     </td>
                     <td>
                         @php
@@ -247,7 +285,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="11" class="text-center py-4">
+                    <td colspan="19" class="text-center py-4">
                         @if(request()->hasAny(['search', 'source', 'status', 'temperature', 'agent_id', 'stacked', 'dnc']))
                             <div class="text-secondary mb-2">{{ __('No leads match your current filters.') }}</div>
                             <a href="{{ route('leads.index') }}" class="btn btn-sm btn-outline-secondary">
@@ -364,6 +402,51 @@ document.querySelectorAll('.status-select').forEach(function(select) {
             showToast('{{ __("Network error. Please try again.") }}', 'error');
         });
     });
+});
+
+function saveLeadCustomField(input) {
+    var leadId = input.dataset.leadId;
+    var field = input.dataset.field;
+    var value = input.type === 'checkbox' ? input.checked : input.value;
+    input.classList.add('is-saving');
+
+    fetch('{{ url("/leads") }}/' + leadId + '/custom-field', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({ field: field, value: value })
+    }).then(function(r) {
+        input.classList.remove('is-saving');
+        if (r.ok) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+            setTimeout(function() { input.classList.remove('is-valid'); }, 1200);
+        } else {
+            input.classList.add('is-invalid');
+            showToast('{{ __("Failed to save lead column.") }}', 'error');
+        }
+    }).catch(function() {
+        input.classList.remove('is-saving');
+        input.classList.add('is-invalid');
+        showToast('{{ __("Network error. Please try again.") }}', 'error');
+    });
+}
+
+document.querySelectorAll('.lead-custom-field').forEach(function(input) {
+    if (input.type === 'checkbox' || input.type === 'date' || input.type === 'number') {
+        input.addEventListener('change', function() { saveLeadCustomField(this); });
+    } else {
+        input.addEventListener('blur', function() { saveLeadCustomField(this); });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && this.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
+    }
 });
 
 // Saved views (localStorage)

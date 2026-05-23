@@ -344,6 +344,44 @@ class LeadController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function updateCustomField(Request $request, Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        $fieldRules = [
+            'phone_contact_1' => 'boolean',
+            'phone_contact_notes' => 'nullable|string|max:2000',
+            'whatsapp_intro_sent' => 'boolean',
+            'follow_up_date' => 'nullable|date',
+            'listing_appointment_date' => 'nullable|date',
+            'listing_notes' => 'nullable|string|max:2000',
+            'existing_listing_link' => 'nullable|string|max:2048',
+            'listing_price' => 'nullable|numeric|min:0|max:999999999999.99',
+        ];
+
+        $request->validate([
+            'field' => 'required|string|in:' . implode(',', array_keys($fieldRules)),
+            'value' => $fieldRules[$request->input('field')] ?? 'nullable',
+        ]);
+
+        $field = $request->input('field');
+        $value = $request->input('value');
+
+        if (in_array($field, ['phone_contact_1', 'whatsapp_intro_sent'], true)) {
+            $value = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+        } elseif (in_array($field, ['follow_up_date', 'listing_appointment_date'], true) && blank($value)) {
+            $value = null;
+        } elseif ($field === 'listing_price' && blank($value)) {
+            $value = null;
+        }
+
+        $customFields = $lead->custom_fields ?? [];
+        $customFields[$field] = $value;
+        $lead->update(['custom_fields' => $customFields]);
+
+        return response()->json(['success' => true, 'value' => $value]);
+    }
+
     public function claim(Lead $lead)
     {
         $this->authorize('claim', $lead);
