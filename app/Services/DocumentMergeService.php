@@ -106,23 +106,23 @@ class DocumentMergeService
         $data['property.property_type'] = $property ? __(ucwords(str_replace('_', ' ', $property->property_type ?? ''))) : '';
         $data['property.bedrooms'] = (string) ($property->bedrooms ?? '');
         $data['property.bathrooms'] = (string) ($property->bathrooms ?? '');
-        $data['property.square_footage'] = $property->square_footage ? number_format($property->square_footage) : '';
-        $data['property.year_built'] = (string) ($property->year_built ?? '');
-        $data['property.lot_size'] = $property->lot_size ? Fmt::area($property->lot_size) : '';
-        $data['property.estimated_value'] = $this->formatCurrency($property->estimated_value ?? null);
+        $data['property.square_footage'] = $property?->square_footage ? number_format($property->square_footage) : '';
+        $data['property.year_built'] = (string) ($property?->year_built ?? '');
+        $data['property.lot_size'] = $property?->lot_size ? Fmt::area($property->lot_size) : '';
+        $data['property.estimated_value'] = $this->formatCurrency($property?->estimated_value);
 
         // Property fields (RE)
-        $data['property.list_price'] = $this->formatCurrency($property->list_price ?? null);
+        $data['property.list_price'] = $this->formatCurrency($property?->list_price);
         $data['property.listing_status'] = $property ? __(ucwords(str_replace('_', ' ', $property->listing_status ?? ''))) : '';
-        $data['property.listed_at'] = $this->formatDate($property->listed_at ?? null);
-        $data['property.sold_at'] = $this->formatDate($property->sold_at ?? null);
-        $data['property.sold_price'] = $this->formatCurrency($property->sold_price ?? null);
-        $data['property.mls_number'] = $property->mls_number ?? '';
+        $data['property.listed_at'] = $this->formatDate($property?->listed_at);
+        $data['property.sold_at'] = $this->formatDate($property?->sold_at);
+        $data['property.sold_price'] = $this->formatCurrency($property?->sold_price);
+        $data['property.mls_number'] = $property?->mls_number ?? '';
 
         // Property fields (wholesale)
-        $data['property.after_repair_value'] = $this->formatCurrency($property->after_repair_value ?? null);
-        $data['property.repair_estimate'] = $this->formatCurrency($property->repair_estimate ?? null);
-        $data['property.our_offer'] = $this->formatCurrency($property->our_offer ?? null);
+        $data['property.after_repair_value'] = $this->formatCurrency($property?->after_repair_value);
+        $data['property.repair_estimate'] = $this->formatCurrency($property?->repair_estimate);
+        $data['property.our_offer'] = $this->formatCurrency($property?->our_offer);
         $data['property.distress_markers'] = $property && $property->distress_markers
             ? implode(', ', array_map(fn($m) => __(ucwords(str_replace('_', ' ', $m))), $property->distress_markers))
             : '';
