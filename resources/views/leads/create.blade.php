@@ -41,6 +41,13 @@
                     @error('property_zip_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             </div>
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <label class="form-label">{{ __('Existing Listing Link') }}</label>
+                    <input type="url" name="existing_listing_link" class="form-control @error('existing_listing_link') is-invalid @enderror" value="{{ old('existing_listing_link') }}" placeholder="https://www.property24.com/...">
+                    @error('existing_listing_link') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+            </div>
         </div>
     </div>
 
