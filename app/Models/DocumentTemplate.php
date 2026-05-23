@@ -362,69 +362,6 @@ Type: {{property.property_type}} | Sq Ft: {{property.square_footage}} | Year Bui
 </div>
 </div>',
             ],
-
-            'listing_sheet' => [
-                'name' => __('Listing Sheet'),
-                'type' => 'listing_sheet',
-                'content' => '<div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px;">
-<div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #2563eb; padding-bottom: 20px;">
-<h1 style="font-size: 28px; margin-bottom: 8px;">LISTING SHEET</h1>
-<p style="color: #666; margin: 0;">Prepared {{today_long}}</p>
-</div>
-
-<h2 style="font-size: 22px; margin-bottom: 10px;">{{property.full_address}}</h2>
-<p style="font-size: 18px; color: #2563eb; margin-top: 0;"><strong>{{property.list_price}}</strong></p>
-
-<table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-<tr>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Property Type</strong><br>{{property.property_type}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Bedrooms</strong><br>{{property.bedrooms}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Bathrooms</strong><br>{{property.bathrooms}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Size</strong><br>{{property.square_footage}}</td>
-</tr>
-<tr>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Lot Size</strong><br>{{property.lot_size}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Year Built</strong><br>{{property.year_built}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>Status</strong><br>{{property.listing_status}}</td>
-<td style="padding: 10px; border: 1px solid #ddd;"><strong>MLS Number</strong><br>{{property.mls_number}}</td>
-</tr>
-</table>
-
-<h3>Seller / Client</h3>
-<p>{{lead.full_name}}<br>Phone: {{lead.phone}}<br>Email: {{lead.email}}</p>
-
-<h3>Listing Details</h3>
-<table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-<tr style="border-bottom: 1px solid #ddd;">
-<td style="padding: 8px;"><strong>Listed Date:</strong></td>
-<td style="padding: 8px;">{{property.listed_at}}</td>
-</tr>
-<tr style="border-bottom: 1px solid #ddd;">
-<td style="padding: 8px;"><strong>Estimated Value:</strong></td>
-<td style="padding: 8px;">{{property.estimated_value}}</td>
-</tr>
-<tr style="border-bottom: 1px solid #ddd;">
-<td style="padding: 8px;"><strong>Total Commission:</strong></td>
-<td style="padding: 8px;">{{deal.total_commission}}</td>
-</tr>
-<tr style="border-bottom: 1px solid #ddd;">
-<td style="padding: 8px;"><strong>Listing Commission:</strong></td>
-<td style="padding: 8px;">{{deal.listing_commission_pct}}</td>
-</tr>
-<tr style="border-bottom: 1px solid #ddd;">
-<td style="padding: 8px;"><strong>Buyer Commission:</strong></td>
-<td style="padding: 8px;">{{deal.buyer_commission_pct}}</td>
-</tr>
-</table>
-
-<h3>Notes</h3>
-<p>{{deal.notes}}</p>
-
-<div style="margin-top: 35px; padding: 15px; background: #f8f9fa; border-left: 4px solid #2563eb;">
-<p style="margin: 0;"><strong>{{company.name}}</strong><br>{{company.email}} | {{company.phone}}</p>
-</div>
-</div>',
-            ],
         ];
     }
 }
