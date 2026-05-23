@@ -108,6 +108,13 @@
 
 @push('scripts')
 <script>
+window.gm_authFailure = function () {
+    var el = document.getElementById('scout-alert');
+    if (el) {
+        el.className = 'alert alert-danger py-2 px-3 mb-0';
+        el.textContent = 'Google Maps could not load. The API key may need this CRM domain added to allowed referrers.';
+    }
+};
 window.scoutConfig = {
     routes: {
         session: @json(route('scout.session')),
@@ -291,9 +298,9 @@ window.scoutConfig = {
         const parts = { city: '', state: '', zip: '' };
         (result.address_components || []).forEach(component => {
             const types = component.types || [];
-            if (types.includes('locality') || types.includes('sublocality')) parts.city ||= component.long_name;
-            if (types.includes('administrative_area_level_1')) parts.state = component.long_name;
-            if (types.includes('postal_code')) parts.zip = component.long_name;
+            if ((types.indexOf('locality') !== -1 || types.indexOf('sublocality') !== -1) && !parts.city) parts.city = component.long_name;
+            if (types.indexOf('administrative_area_level_1') !== -1) parts.state = component.long_name;
+            if (types.indexOf('postal_code') !== -1) parts.zip = component.long_name;
         });
         return parts;
     }
@@ -354,6 +361,7 @@ window.scoutConfig = {
     }
 
     window.initScoutMap = function () {
+        try {
         const fallback = { lat: -25.785, lng: 28.282 };
         map = new google.maps.Map(document.getElementById('scout-map'), {
             center: fallback,
@@ -366,6 +374,9 @@ window.scoutConfig = {
         geocoder = new google.maps.Geocoder();
         drawExisting();
         requestLocation();
+        } catch (error) {
+            setStatus('Map failed to initialise: ' + error.message, 'danger');
+        }
     };
 
     startBtn.addEventListener('click', () => startTracking().catch(err => setStatus('Could not start scouting: ' + err.message, 'danger')));
@@ -380,6 +391,6 @@ window.scoutConfig = {
 })();
 </script>
 @if($googleMapsKey)
-<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($googleMapsKey) }}&callback=initScoutMap&region=za"></script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{ urlencode($googleMapsKey) }}&callback=initScoutMap&region=za" onerror="window.gm_authFailure && window.gm_authFailure()"></script>
 @endif
 @endpush
