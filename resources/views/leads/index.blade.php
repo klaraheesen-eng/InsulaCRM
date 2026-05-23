@@ -113,12 +113,6 @@
             <div class="col-auto">
                 <button type="submit" class="btn btn-outline-primary">{{ __('Filter') }}</button>
             </div>
-            <div class="col-auto">
-                @php $newestFirst = request('sort', 'created_at') === 'created_at' && request('direction', 'desc') === 'desc'; @endphp
-                <a href="{{ request()->fullUrlWithQuery(['sort' => 'created_at', 'direction' => $newestFirst ? 'asc' : 'desc']) }}" class="btn btn-outline-secondary">
-                    {{ $newestFirst ? __('Sort Oldest First') : __('Sort Newest First') }}
-                </a>
-            </div>
             @if(request()->hasAny(['search', 'source', 'status', 'temperature', 'agent_id', 'stacked', 'dnc']))
             <div class="col-md-1">
                 <a href="{{ route('leads.index') }}" class="btn btn-outline-secondary w-100">{{ __('Clear') }}</a>
@@ -156,6 +150,7 @@
                 <tr>
                     <th class="w-1"><input type="checkbox" id="select-all" class="form-check-input" aria-label="{{ __('Select all leads') }}"></th>
                     <th class="w-1"><a href="{{ $sortUrl('id') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('ID') }}{!! $sortArrow('id') !!}</a></th>
+                    <th><a href="{{ $sortUrl('created_at') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Date Added') }}{!! $sortArrow('created_at') !!}</a></th>
                     <th><a href="{{ $sortUrl('temperature') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Temp') }}{!! $sortArrow('temperature') !!}</a></th>
                     <th><a href="{{ $sortUrl('first_name') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Name') }}{!! $sortArrow('first_name') !!}</a></th>
                     <th>{{ __('Address') }}</th>
@@ -174,7 +169,6 @@
                     <th><a href="{{ $sortUrl('motivation_score') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Score') }}{!! $sortArrow('motivation_score') !!}</a></th>
                     @endif
                     <th>{{ __('Agent') }}</th>
-                    <th><a href="{{ $sortUrl('created_at') }}" class="text-reset text-decoration-none d-inline-flex align-items-center">{{ __('Date Added') }}{!! $sortArrow('created_at') !!}</a></th>
                     <th class="w-1"></th>
                 </tr>
             </thead>
@@ -184,6 +178,7 @@
                 <tr>
                     <td><input type="checkbox" class="form-check-input lead-checkbox" value="{{ $lead->id }}" aria-label="{{ __('Select') }} {{ $lead->full_name }}"></td>
                     <td class="text-secondary">{{ $lead->id }}</td>
+                    <td class="text-secondary">{{ $lead->created_at->format('M d, Y') }}</td>
                     <td>
                         @php
                             $tempColors = ['hot' => 'bg-red-lt', 'warm' => 'bg-yellow-lt', 'cold' => 'bg-azure-lt'];
@@ -275,7 +270,6 @@
                     </td>
                     @endif
                     <td class="text-secondary">{{ $lead->agent->name ?? '-' }}</td>
-                    <td class="text-secondary">{{ $lead->created_at->format('M d, Y') }}</td>
                     <td>
                         <div class="dropdown">
                             <button class="btn btn-ghost-secondary btn-icon" data-bs-toggle="dropdown" aria-label="{{ __('Actions for') }} {{ $lead->full_name }}">
