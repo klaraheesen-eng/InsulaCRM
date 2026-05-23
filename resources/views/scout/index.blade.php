@@ -14,6 +14,42 @@
         background: #111827;
     }
     #scout-map { width: 100%; height: 100%; }
+    .capture-center-pin {
+        position: absolute;
+        left: 50%;
+        top: calc((100% - var(--capture-sheet-height, 0px)) / 2);
+        z-index: 7;
+        width: 36px;
+        height: 36px;
+        transform: translate(-50%, -100%);
+        pointer-events: none;
+        display: none;
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,.35));
+    }
+    .capture-center-pin.show { display: block; }
+    .capture-center-pin::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 2px;
+        width: 24px;
+        height: 24px;
+        background: #dc2626;
+        border: 3px solid #fff;
+        border-radius: 50% 50% 50% 0;
+        transform: translateX(-50%) rotate(-45deg);
+    }
+    .capture-center-pin::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 10px;
+        width: 8px;
+        height: 8px;
+        background: #fff;
+        border-radius: 50%;
+        transform: translateX(-50%);
+    }
     .scout-toolbar {
         position: absolute;
         left: 12px;
@@ -47,7 +83,13 @@
         display: none;
     }
     .capture-sheet.show { display: block; }
-    .capture-sheet textarea { min-height: 72px; }
+    .scout-shell.is-capturing .scout-toolbar { display: none; }
+    body.scout-capture-open #quick-add-fab,
+    body.scout-capture-open #pwa-install-banner { display: none !important; }
+    .capture-address-bar {
+        min-height: 48px;
+        font-size: 1rem;
+    }
     @media (max-width: 768px) {
         .page-body { margin-top: 0; }
         .scout-shell { height: calc(100vh - 64px); min-height: 520px; margin: -0.75rem; }
@@ -60,6 +102,7 @@
 @section('content')
 <div class="scout-shell">
     <div id="scout-map"></div>
+    <div id="capture-center-pin" class="capture-center-pin" aria-hidden="true"></div>
 
     <div class="scout-status">
         <div id="scout-alert" class="alert alert-info py-2 px-3 mb-0">
@@ -87,7 +130,7 @@
         <p class="text-secondary small mb-2">{{ __('Move the pin onto the house, confirm the address, then take a photo.') }}</p>
         <div class="mb-2">
             <label class="form-label">{{ __('Address') }}</label>
-            <textarea id="capture-address" name="address" class="form-control" placeholder="{{ __('Address from pin') }}"></textarea>
+            <input id="capture-address" name="address" class="form-control capture-address-bar" placeholder="{{ __('Address from pin') }}">
         </div>
         <input type="hidden" id="capture-latitude" name="latitude">
         <input type="hidden" id="capture-longitude" name="longitude">
@@ -120,6 +163,7 @@ window.scoutConfig = {
         session: @json(route('scout.session')),
         point: @json(route('scout.points.store')),
         capture: @json(route('scout.captureLead')),
+        reverseGeocode: @json(route('scout.reverseGeocode')),
     },
     csrf: @json(csrf_token()),
     existingPoints: @json($existingPoints),
@@ -127,8 +171,12 @@ window.scoutConfig = {
 };
 
 (function () {
-    let map, geocoder, currentMarker, captureMarker, livePolyline;
+    let map, geocoder, pinProjectionOverlay, currentMarker, captureMarker, livePolyline;
     let currentPosition = null;
+    let captureMode = false;
+    let hasCenteredOnLocation = false;
+    let geocodeTimer = null;
+    let geocodeRequestId = 0;
     let watchId = null;
     let trackingTimer = null;
     let sessionId = null;
@@ -138,12 +186,14 @@ window.scoutConfig = {
     const pointById = new Map();
     const path = [];
 
+    const shellEl = document.querySelector('.scout-shell');
     const alertEl = document.getElementById('scout-alert');
     const startBtn = document.getElementById('start-scouting');
     const stopBtn = document.getElementById('stop-scouting');
     const captureBtn = document.getElementById('capture-house');
     const centerBtn = document.getElementById('center-me');
     const sheet = document.getElementById('capture-sheet');
+    const centerPinEl = document.getElementById('capture-center-pin');
     const addressEl = document.getElementById('capture-address');
     const latEl = document.getElementById('capture-latitude');
     const lngEl = document.getElementById('capture-longitude');
@@ -214,9 +264,10 @@ window.scoutConfig = {
             currentMarker.setPosition(latLng);
         }
         captureBtn.disabled = false;
-        if (!path.length) {
+        if (!captureMode && !hasCenteredOnLocation && !path.length) {
             map.setCenter(latLng);
             map.setZoom(17);
+            hasCenteredOnLocation = true;
         }
     }
 
@@ -229,7 +280,9 @@ window.scoutConfig = {
         watchId = navigator.geolocation.watchPosition(
             pos => {
                 updateCurrentMarker(pos);
-                setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
+                if (!captureMode) {
+                    setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
+                }
             },
             err => setStatus('Location permission/error: ' + err.message, 'danger'),
             { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
@@ -305,38 +358,99 @@ window.scoutConfig = {
         return parts;
     }
 
+    function applyAddressResult(address, parts = {}) {
+        addressEl.value = address || `${Number(latEl.value).toFixed(7)}, ${Number(lngEl.value).toFixed(7)}`;
+        pendingAddressParts = parts || {};
+        cityEl.value = pendingAddressParts.city || 'Pretoria';
+        stateEl.value = pendingAddressParts.state || 'Gauteng';
+        zipEl.value = pendingAddressParts.zip || '';
+    }
+
+    async function fallbackReverseGeocode(latLng, requestId) {
+        const params = new URLSearchParams({
+            latitude: latLng.lat(),
+            longitude: latLng.lng(),
+        });
+        const result = await authFetch(`${window.scoutConfig.routes.reverseGeocode}?${params.toString()}`);
+        if (requestId !== geocodeRequestId) return;
+        applyAddressResult(result.address, {
+            city: result.city || 'Pretoria',
+            state: result.state || 'Gauteng',
+            zip: result.zip_code || '',
+        });
+    }
+
+    function getPinnedLatLng() {
+        const projection = pinProjectionOverlay && pinProjectionOverlay.getProjection();
+        if (!projection || !centerPinEl.classList.contains('show')) return map.getCenter();
+
+        const mapRect = map.getDiv().getBoundingClientRect();
+        const pinRect = centerPinEl.getBoundingClientRect();
+        const pinTip = new google.maps.Point(
+            pinRect.left + (pinRect.width / 2) - mapRect.left,
+            pinRect.bottom - mapRect.top
+        );
+
+        return projection.fromContainerPixelToLatLng(pinTip) || map.getCenter();
+    }
+
     function geocodePin(latLng) {
+        const requestId = ++geocodeRequestId;
         latEl.value = latLng.lat();
         lngEl.value = latLng.lng();
+        addressEl.value = 'Looking up address…';
         geocoder.geocode({ location: latLng }, (results, status) => {
+            if (requestId !== geocodeRequestId) return;
             if (status === 'OK' && results && results[0]) {
-                addressEl.value = results[0].formatted_address;
-                pendingAddressParts = extractAddressParts(results[0]);
-                cityEl.value = pendingAddressParts.city || 'Pretoria';
-                stateEl.value = pendingAddressParts.state || 'Gauteng';
-                zipEl.value = pendingAddressParts.zip || '';
+                applyAddressResult(results[0].formatted_address, extractAddressParts(results[0]));
             } else {
-                addressEl.value = `${latLng.lat().toFixed(7)}, ${latLng.lng().toFixed(7)}`;
+                fallbackReverseGeocode(latLng, requestId).catch(() => {
+                    if (requestId !== geocodeRequestId) return;
+                    applyAddressResult(`${latLng.lat().toFixed(7)}, ${latLng.lng().toFixed(7)}`, {});
+                });
             }
         });
+    }
+
+    function updateCaptureFromPin(delay = 350) {
+        if (!captureMode || !map) return;
+        if (geocodeTimer) clearTimeout(geocodeTimer);
+        geocodeTimer = setTimeout(() => geocodePin(getPinnedLatLng()), delay);
+    }
+
+    function updateCaptureLayout() {
+        const sheetHeight = sheet.classList.contains('show') ? sheet.offsetHeight : 0;
+        shellEl.style.setProperty('--capture-sheet-height', sheetHeight + 'px');
+    }
+
+    function closeCapture() {
+        captureMode = false;
+        centerPinEl.classList.remove('show');
+        sheet.classList.remove('show');
+        shellEl.classList.remove('is-capturing');
+        document.body.classList.remove('scout-capture-open');
+        updateCaptureLayout();
+        if (geocodeTimer) clearTimeout(geocodeTimer);
+        geocodeTimer = null;
     }
 
     function beginCapture() {
         const position = currentPosition
             ? { lat: currentPosition.coords.latitude, lng: currentPosition.coords.longitude }
             : map.getCenter();
-        if (captureMarker) captureMarker.setMap(null);
-        captureMarker = new google.maps.Marker({
-            map,
-            position,
-            draggable: true,
-            title: 'Move me onto the house',
-            icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-        });
-        map.panTo(position);
+        if (captureMarker) {
+            captureMarker.setMap(null);
+            captureMarker = null;
+        }
+        captureMode = true;
+        centerPinEl.classList.add('show');
         sheet.classList.add('show');
-        geocodePin(captureMarker.getPosition());
-        captureMarker.addListener('dragend', () => geocodePin(captureMarker.getPosition()));
+        shellEl.classList.add('is-capturing');
+        document.body.classList.add('scout-capture-open');
+        updateCaptureLayout();
+        map.panTo(position);
+        requestAnimationFrame(() => updateCaptureFromPin(0));
+        setStatus('Move the map until the pin is on the house. The address updates below.', 'info');
     }
 
     async function submitCapture(event) {
@@ -350,11 +464,13 @@ window.scoutConfig = {
             path.push({ lat: res.lat, lng: res.lng });
         }
         lastPointId = res.point_id;
-        if (captureMarker) {
-            captureMarker.setIcon('https://maps.google.com/mapfiles/ms/icons/green-dot.png');
-            captureMarker.setDraggable(false);
-        }
-        sheet.classList.remove('show');
+        new google.maps.Marker({
+            map,
+            position: { lat: res.lat, lng: res.lng },
+            title: res.address || 'Scouted lead',
+            icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+        });
+        closeCapture();
         sheet.reset();
         setStatus('Lead created from scout capture. Opening lead…', 'success');
         setTimeout(() => { window.location.href = res.lead_url; }, 700);
@@ -366,12 +482,20 @@ window.scoutConfig = {
         map = new google.maps.Map(document.getElementById('scout-map'), {
             center: fallback,
             zoom: 15,
-            mapTypeId: 'roadmap',
+            mapTypeId: 'hybrid',
             fullscreenControl: false,
             streetViewControl: false,
-            mapTypeControl: true,
+            mapTypeControl: !window.matchMedia('(max-width: 768px)').matches,
+            gestureHandling: 'greedy',
         });
         geocoder = new google.maps.Geocoder();
+        pinProjectionOverlay = new google.maps.OverlayView();
+        pinProjectionOverlay.onAdd = function () {};
+        pinProjectionOverlay.draw = function () {};
+        pinProjectionOverlay.onRemove = function () {};
+        pinProjectionOverlay.setMap(map);
+        map.addListener('idle', () => updateCaptureFromPin());
+        captureBtn.disabled = false;
         drawExisting();
         requestLocation();
         } catch (error) {
@@ -386,7 +510,8 @@ window.scoutConfig = {
         else requestLocation();
     });
     captureBtn.addEventListener('click', beginCapture);
-    document.getElementById('cancel-capture').addEventListener('click', () => sheet.classList.remove('show'));
+    document.getElementById('cancel-capture').addEventListener('click', closeCapture);
+    window.addEventListener('resize', updateCaptureLayout);
     sheet.addEventListener('submit', event => submitCapture(event).catch(err => setStatus('Could not create lead: ' + err.message, 'danger')));
 })();
 </script>

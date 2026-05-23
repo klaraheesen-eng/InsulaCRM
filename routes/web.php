@@ -178,6 +178,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
 
     // ── Scout Utility (mobile field scouting) ────────────────────────
     Route::get('/scout', [ScoutController::class, 'index'])->name('scout.index');
+    Route::get('/scout/reverse-geocode', [ScoutController::class, 'reverseGeocode'])->name('scout.reverseGeocode');
     Route::post('/scout/session', [ScoutController::class, 'startSession'])->name('scout.session');
     Route::post('/scout/points', [ScoutController::class, 'storePoint'])->name('scout.points.store');
     Route::post('/scout/capture-lead', [ScoutController::class, 'captureLead'])->name('scout.captureLead');

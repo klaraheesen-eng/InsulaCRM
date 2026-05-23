@@ -10,6 +10,7 @@ use App\Models\ScoutPoint;
 use App\Models\ScoutSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -52,6 +53,40 @@ class ScoutController extends Controller
             'googleMapsKey' => config('services.google_maps.browser_key'),
             'existingPoints' => $points,
             'existingCaptures' => $captures,
+        ]);
+    }
+
+    public function reverseGeocode(Request $request)
+    {
+        $data = $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+        ]);
+
+        $response = Http::timeout(8)
+            ->withHeaders([
+                'User-Agent' => 'InsulaCRM Scout Utility (estatecrm.barberrylabs.dpdns.org)',
+            ])
+            ->get('https://nominatim.openstreetmap.org/reverse', [
+                'format' => 'jsonv2',
+                'lat' => $data['latitude'],
+                'lon' => $data['longitude'],
+                'addressdetails' => 1,
+                'zoom' => 18,
+            ]);
+
+        if (! $response->ok()) {
+            return response()->json(['message' => 'Address lookup failed'], 502);
+        }
+
+        $payload = $response->json();
+        $address = $payload['address'] ?? [];
+
+        return response()->json([
+            'address' => $payload['display_name'] ?? null,
+            'city' => $address['city'] ?? $address['town'] ?? $address['village'] ?? $address['suburb'] ?? 'Pretoria',
+            'state' => $address['state'] ?? 'Gauteng',
+            'zip_code' => $address['postcode'] ?? '',
         ]);
     }
 
