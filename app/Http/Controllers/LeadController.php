@@ -18,6 +18,7 @@ use App\Services\BusinessModeService;
 use App\Services\CustomFieldService;
 use App\Services\AssignmentHistoryService;
 use App\Services\MotivationScoreService;
+use App\Services\LeadTransactionStatusService;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\LeadAssigned;
 use Illuminate\Support\Facades\Storage;
@@ -235,6 +236,8 @@ class LeadController extends Controller
             ->first();
 
         if ($existingDeal) {
+            app(LeadTransactionStatusService::class)->syncForTransaction($existingDeal);
+
             return redirect()->route('deals.show', $existingDeal)
                 ->with('info', __('This lead already has an active transaction.'));
         }
@@ -254,12 +257,7 @@ class LeadController extends Controller
             'listing_date' => now()->toDateString(),
         ]);
 
-        $oldStatus = $lead->status;
-        if (! in_array($lead->status, ['active_client', 'closed_won', 'closed_lost', 'dead'], true)) {
-            $lead->update(['status' => 'active_client']);
-            event(new LeadStatusChanged($lead, $oldStatus));
-            Hooks::doAction('lead.status_changed', $lead, $oldStatus);
-        }
+        app(LeadTransactionStatusService::class)->syncForTransaction($deal);
 
         Activity::create([
             'tenant_id' => auth()->user()->tenant_id,

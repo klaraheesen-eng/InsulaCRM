@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Notifications\BuyerMatchFound;
 use App\Notifications\DealStageChanged as DealStageChangedNotification;
 use App\Services\BuyerScoreService;
+use App\Services\LeadTransactionStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -88,6 +89,7 @@ class DealController extends Controller
         }
 
         $deal->update($updateData);
+        app(LeadTransactionStatusService::class)->syncForTransaction($deal->fresh(['lead', 'tenant']));
 
         Activity::create([
             'tenant_id' => auth()->user()->tenant_id,
@@ -193,7 +195,12 @@ class DealController extends Controller
     {
         $this->authorize('update', $deal);
 
+        $oldStage = $deal->stage;
         $deal->update($request->validated());
+
+        if ($deal->wasChanged('stage') && $deal->stage !== $oldStage) {
+            app(LeadTransactionStatusService::class)->syncForTransaction($deal->fresh(['lead', 'tenant']));
+        }
 
         // Recalculate due_diligence_end_date if relevant fields changed
         if ($deal->contract_date && $deal->inspection_period_days > 0 && $deal->stage === 'under_contract') {
