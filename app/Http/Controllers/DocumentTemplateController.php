@@ -22,9 +22,29 @@ class DocumentTemplateController extends Controller
     {
         $types = DocumentTemplate::typeLabels();
         $mergeFields = DocumentTemplate::getAvailableMergeFields();
-        $starterTemplates = DocumentTemplate::getStarterTemplates();
+        $starterTemplates = $this->getStarterTemplatesWithDefaults();
 
         return view('documents.templates.create', compact('types', 'mergeFields', 'starterTemplates'));
+    }
+
+
+    private function getStarterTemplatesWithDefaults(): array
+    {
+        $starterTemplates = DocumentTemplate::getStarterTemplates();
+
+        $defaultTemplates = DocumentTemplate::where('is_default', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'content']);
+
+        foreach ($defaultTemplates as $template) {
+            $starterTemplates['saved_' . $template->id] = [
+                'name' => $template->name,
+                'type' => $template->type,
+                'content' => $template->content,
+            ];
+        }
+
+        return $starterTemplates;
     }
 
     public function store(Request $request)
@@ -68,7 +88,7 @@ class DocumentTemplateController extends Controller
     {
         $types = DocumentTemplate::typeLabels();
         $mergeFields = DocumentTemplate::getAvailableMergeFields();
-        $starterTemplates = DocumentTemplate::getStarterTemplates();
+        $starterTemplates = $this->getStarterTemplatesWithDefaults();
 
         return view('documents.templates.edit', [
             'template' => $documentTemplate,
