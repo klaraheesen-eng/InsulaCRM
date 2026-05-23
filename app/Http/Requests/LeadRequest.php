@@ -21,8 +21,12 @@ class LeadRequest extends FormRequest
 
         $rules = [
             'agent_id' => ['required', Rule::exists('users', 'id')->where('tenant_id', auth()->user()->tenant_id)],
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'property_address' => 'nullable|string|max:255',
+            'property_city' => 'nullable|string|max:100',
+            'property_state' => 'nullable|string|max:100',
+            'property_zip_code' => 'nullable|string|max:20',
             'phone' => 'nullable|string|max:50',
             'secondary_phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
@@ -57,8 +61,6 @@ class LeadRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'first_name.required' => 'Lead first name is required.',
-            'last_name.required' => 'Lead last name is required.',
             'agent_id.required' => 'Please assign an agent.',
             'agent_id.exists' => 'Selected agent is invalid.',
         ];

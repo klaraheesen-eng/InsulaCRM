@@ -12,21 +12,53 @@
 <form action="{{ route('leads.store') }}" method="POST">
     @csrf
 
-    <!-- Contact Information -->
+    <!-- Property Information -->
     <div class="card mb-3">
         <div class="card-header">
-            <h3 class="card-title">{{ __('Contact Information') }}</h3>
+            <h3 class="card-title">{{ __('Property Information') }}</h3>
         </div>
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-6">
-                    <label class="form-label required">{{ __('First Name') }}</label>
-                    <input type="text" name="first_name" class="form-control @error('first_name') is-invalid @enderror" value="{{ old('first_name') }}" required>
+                    <label class="form-label">{{ __('Address') }}</label>
+                    <input type="text" name="property_address" class="form-control @error('property_address') is-invalid @enderror" value="{{ old('property_address') }}" placeholder="{{ __('Street address') }}" autofocus>
+                    @error('property_address') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <small class="text-secondary">{{ __('You can create the lead from the address first and add owner details later.') }}</small>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ __('City') }}</label>
+                    <input type="text" name="property_city" class="form-control @error('property_city') is-invalid @enderror" value="{{ old('property_city', 'Pretoria') }}">
+                    @error('property_city') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ Fmt::stateLabel() }}</label>
+                    <input type="text" name="property_state" class="form-control @error('property_state') is-invalid @enderror" value="{{ old('property_state', 'Gauteng') }}">
+                    @error('property_state') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{{ Fmt::postalCodeLabel() }}</label>
+                    <input type="text" name="property_zip_code" class="form-control @error('property_zip_code') is-invalid @enderror" value="{{ old('property_zip_code') }}">
+                    @error('property_zip_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{{ __('Owner / Contact Information') }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">{{ __('First Name') }}</label>
+                    <input type="text" name="first_name" class="form-control @error('first_name') is-invalid @enderror" value="{{ old('first_name') }}" placeholder="{{ __('Unknown') }}">
                     @error('first_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label required">{{ __('Last Name') }}</label>
-                    <input type="text" name="last_name" class="form-control @error('last_name') is-invalid @enderror" value="{{ old('last_name') }}" required>
+                    <label class="form-label">{{ __('Last Name') }}</label>
+                    <input type="text" name="last_name" class="form-control @error('last_name') is-invalid @enderror" value="{{ old('last_name') }}" placeholder="{{ __('Owner') }}">
                     @error('last_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             </div>

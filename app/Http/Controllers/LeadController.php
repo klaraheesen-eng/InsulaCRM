@@ -11,6 +11,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadClaim;
 use App\Models\LeadPhoto;
+use App\Models\Property;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -168,6 +169,16 @@ class LeadController extends Controller
         $this->authorize('create', Lead::class);
 
         $data = $request->validated();
+        $propertyData = [
+            'address' => $data['property_address'] ?? null,
+            'city' => $data['property_city'] ?? null,
+            'state' => $data['property_state'] ?? null,
+            'zip_code' => $data['property_zip_code'] ?? null,
+        ];
+        unset($data['property_address'], $data['property_city'], $data['property_state'], $data['property_zip_code']);
+
+        $data['first_name'] = filled($data['first_name'] ?? null) ? $data['first_name'] : 'Unknown';
+        $data['last_name'] = filled($data['last_name'] ?? null) ? $data['last_name'] : 'Owner';
         $data['tenant_id'] = auth()->user()->tenant_id;
 
         // Handle custom fields — store as JSON, remove empty values
@@ -180,6 +191,19 @@ class LeadController extends Controller
         }
 
         $lead = Lead::create($data);
+
+        if (filled($propertyData['address'] ?? null)) {
+            Property::create([
+                'tenant_id' => auth()->user()->tenant_id,
+                'lead_id' => $lead->id,
+                'address' => $propertyData['address'],
+                'city' => $propertyData['city'] ?: 'Pretoria',
+                'state' => $propertyData['state'] ?: 'Gauteng',
+                'zip_code' => $propertyData['zip_code'] ?: '',
+                'property_type' => 'house',
+            ]);
+        }
+
         app(MotivationScoreService::class)->recalculate($lead);
 
         // AI auto-qualify temperature
