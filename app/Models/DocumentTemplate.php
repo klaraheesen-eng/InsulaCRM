@@ -14,6 +14,10 @@ class DocumentTemplate extends Model
         'addendum' => 'Addendum',
         'investor_packet' => 'Investor Packet',
         'listing_sheet' => 'Listing Sheet',
+        'sole_mandate' => 'Sole Mandate',
+        'dual_mandate' => 'Dual Mandate',
+        'offer_to_purchase' => 'Offer to Purchase',
+        'rental_agreement' => 'Rental Agreement',
         'other' => 'Other',
     ];
 
