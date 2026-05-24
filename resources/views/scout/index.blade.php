@@ -250,6 +250,7 @@ window.scoutConfig = {
     csrf: @json(csrf_token()),
     existingPoints: @json($existingPoints),
     existingCaptures: @json($existingCaptures),
+    existingProperties: @json($existingProperties),
 };
 
 (function () {
@@ -478,7 +479,30 @@ window.scoutConfig = {
             });
         });
 
+        const propertyLeadIds = new Set((window.scoutConfig.existingProperties || [])
+            .map(property => Number(property.lead_id))
+            .filter(Boolean));
+
+        (window.scoutConfig.existingProperties || []).forEach(property => {
+            const marker = new google.maps.Marker({
+                map,
+                position: { lat: property.lat, lng: property.lng },
+                title: property.address || 'CRM property',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+            });
+            const links = [
+                property.property_url ? `<a href="${property.property_url}">Open property</a>` : '',
+                property.lead_url ? `<a href="${property.lead_url}">Open lead</a>` : '',
+            ].filter(Boolean).join(' · ');
+            const status = [property.listing_status, property.lead_status].filter(Boolean).join(' / ');
+            const info = new google.maps.InfoWindow({
+                content: `<strong>${property.address || 'CRM property'}</strong>${property.lead_name ? `<br>${property.lead_name}` : ''}${status ? `<br>${status}` : ''}${links ? `<br>${links}` : ''}`,
+            });
+            marker.addListener('click', () => info.open({ map, anchor: marker }));
+        });
+
         (window.scoutConfig.existingCaptures || []).forEach(capture => {
+            if (propertyLeadIds.has(Number(capture.lead_id))) return;
             const marker = new google.maps.Marker({
                 map,
                 position: { lat: capture.lat, lng: capture.lng },

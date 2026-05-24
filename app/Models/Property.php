@@ -18,6 +18,9 @@ class Property extends Model
         'city',
         'state',
         'zip_code',
+        'latitude',
+        'longitude',
+        'geocoded_at',
         'property_type',
         'bedrooms',
         'bathrooms',
@@ -43,6 +46,9 @@ class Property extends Model
     protected function casts(): array
     {
         return [
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
+            'geocoded_at' => 'datetime',
             'estimated_value' => 'decimal:2',
             'repair_estimate' => 'decimal:2',
             'after_repair_value' => 'decimal:2',

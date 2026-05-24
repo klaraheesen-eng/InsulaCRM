@@ -53,11 +53,35 @@ class ScoutController extends Controller
                 'created_at' => $capture->created_at->toIso8601String(),
             ]);
 
+        $properties = Property::query()
+            ->with('lead:id,tenant_id,agent_id,first_name,last_name,status')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->when(auth()->user()->isAgent(), function ($query) {
+                $query->whereHas('lead', fn ($leadQuery) => $leadQuery->where('agent_id', auth()->id()));
+            })
+            ->latest('updated_at')
+            ->limit(500)
+            ->get()
+            ->map(fn (Property $property) => [
+                'id' => $property->id,
+                'lead_id' => $property->lead_id,
+                'lead_url' => $property->lead_id ? route('leads.show', $property->lead_id) : null,
+                'property_url' => route('properties.show', $property),
+                'address' => $property->full_address,
+                'lead_name' => $property->lead?->full_name,
+                'lead_status' => $property->lead?->status,
+                'listing_status' => $property->listing_status,
+                'lat' => (float) $property->latitude,
+                'lng' => (float) $property->longitude,
+            ]);
+
         return response()
             ->view('scout.index', [
                 'googleMapsKey' => config('services.google_maps.browser_key'),
                 'existingPoints' => $points,
                 'existingCaptures' => $captures,
+                'existingProperties' => $properties,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
@@ -188,6 +212,9 @@ class ScoutController extends Controller
                 'city' => ($data['city'] ?? null) ?: 'Pretoria',
                 'state' => ($data['state'] ?? null) ?: 'Gauteng',
                 'zip_code' => ($data['zip_code'] ?? null) ?: '',
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+                'geocoded_at' => now(),
                 'property_type' => 'house',
                 'listing_status' => 'active',
                 'notes' => "Scout coordinates: {$data['latitude']}, {$data['longitude']}",
