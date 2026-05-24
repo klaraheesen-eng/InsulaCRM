@@ -146,7 +146,7 @@ class ScoutController extends Controller
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
             'zip_code' => 'nullable|string|max:20',
-            'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:15360',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:15360',
         ]);
 
         $result = DB::transaction(function () use ($request, $data) {
@@ -190,22 +190,26 @@ class ScoutController extends Controller
                 'notes' => "Scout coordinates: {$data['latitude']}, {$data['longitude']}",
             ]);
 
-            $file = $request->file('photo');
-            $extension = $file->getClientOriginalExtension() ?: 'jpg';
-            $filename = 'scout_' . Str::uuid() . '.' . $extension;
-            $path = $file->storeAs("lead-photos/{$lead->id}", $filename, 'public');
+            $path = null;
 
-            LeadPhoto::create([
-                'tenant_id' => auth()->user()->tenant_id,
-                'lead_id' => $lead->id,
-                'uploaded_by' => auth()->id(),
-                'filename' => $filename,
-                'original_name' => $file->getClientOriginalName() ?: $filename,
-                'path' => $path,
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                'caption' => 'Scout house photo',
-            ]);
+            if ($request->hasFile('photo')) {
+                $file = $request->file('photo');
+                $extension = $file->getClientOriginalExtension() ?: 'jpg';
+                $filename = 'scout_' . Str::uuid() . '.' . $extension;
+                $path = $file->storeAs("lead-photos/{$lead->id}", $filename, 'public');
+
+                LeadPhoto::create([
+                    'tenant_id' => auth()->user()->tenant_id,
+                    'lead_id' => $lead->id,
+                    'uploaded_by' => auth()->id(),
+                    'filename' => $filename,
+                    'original_name' => $file->getClientOriginalName() ?: $filename,
+                    'path' => $path,
+                    'mime_type' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                    'caption' => 'Scout house photo',
+                ]);
+            }
 
             ScoutLeadCapture::create([
                 'tenant_id' => auth()->user()->tenant_id,

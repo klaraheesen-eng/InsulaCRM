@@ -119,7 +119,7 @@
         position: absolute;
         left: 0;
         right: 0;
-        bottom: 0;
+        bottom: var(--capture-keyboard-inset, 0px);
         z-index: 6;
         background: var(--tblr-bg-surface, #fff);
         border-radius: 18px 18px 0 0;
@@ -127,6 +127,11 @@
         padding: 12px;
         padding-bottom: calc(12px + env(safe-area-inset-bottom));
         display: none;
+        max-height: min(72dvh, calc(var(--scout-available-height, 100dvh) - 48px));
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        transition: bottom .15s ease-out;
     }
     .capture-sheet.show { display: block; }
     .capture-sheet h3 { font-size: 1.05rem; margin-bottom: .25rem !important; }
@@ -189,7 +194,7 @@
 
     <form id="capture-sheet" class="capture-sheet" enctype="multipart/form-data">
         <h3 class="mb-2">{{ __('Capture House For Sale') }}</h3>
-        <p class="text-secondary small mb-2 capture-help">{{ __('Move the red pin onto the house, confirm the address, then take a photo.') }}</p>
+        <p class="text-secondary small mb-2 capture-help">{{ __('Move the red pin onto the house and confirm the address. A photo is optional.') }}</p>
         <div class="mb-2">
             <label class="form-label">{{ __('Address') }}</label>
             <input id="capture-address" name="address" class="form-control capture-address-bar" placeholder="{{ __('Address from pin') }}">
@@ -200,8 +205,8 @@
         <input type="hidden" id="capture-state" name="state">
         <input type="hidden" id="capture-zip" name="zip_code">
         <div class="mb-3">
-            <label class="form-label required">{{ __('House Photo') }}</label>
-            <input id="capture-photo" type="file" name="photo" class="form-control" accept="image/*" capture="environment" required>
+            <label class="form-label">{{ __('House Photo') }} <span class="text-secondary">({{ __('optional') }})</span></label>
+            <input id="capture-photo" type="file" name="photo" class="form-control" accept="image/*" capture="environment">
         </div>
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary flex-fill">{{ __('Create Lead') }}</button>
@@ -284,13 +289,36 @@ window.scoutConfig = {
         shellEl.style.setProperty('--scout-available-height', available + 'px');
     }
 
-    syncScoutViewport();
-    window.addEventListener('resize', syncScoutViewport);
-    window.addEventListener('orientationchange', () => setTimeout(syncScoutViewport, 250));
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', syncScoutViewport);
-        window.visualViewport.addEventListener('scroll', syncScoutViewport);
+    function syncCaptureKeyboard() {
+        if (!shellEl || !sheet.classList.contains('show')) {
+            shellEl?.style.removeProperty('--capture-keyboard-inset');
+            return;
+        }
+
+        const viewport = window.visualViewport;
+        const inset = viewport ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)) : 0;
+        shellEl.style.setProperty('--capture-keyboard-inset', inset + 'px');
+        updateCaptureLayout();
+
+        if (document.activeElement === addressEl) {
+            requestAnimationFrame(() => addressEl.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+        }
     }
+
+    function syncScoutLayout() {
+        syncScoutViewport();
+        syncCaptureKeyboard();
+    }
+
+    syncScoutLayout();
+    window.addEventListener('resize', syncScoutLayout);
+    window.addEventListener('orientationchange', () => setTimeout(syncScoutLayout, 250));
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncScoutLayout);
+        window.visualViewport.addEventListener('scroll', syncScoutLayout);
+    }
+    addressEl.addEventListener('focus', () => setTimeout(syncCaptureKeyboard, 100));
+    addressEl.addEventListener('blur', () => setTimeout(syncCaptureKeyboard, 250));
 
     function setStatus(message, type = 'info') {
         alertEl.className = 'alert alert-' + type + ' py-2 px-3 mb-0';
@@ -626,6 +654,7 @@ window.scoutConfig = {
         sheet.classList.remove('show');
         shellEl.classList.remove('is-capturing');
         document.body.classList.remove('scout-capture-open');
+        shellEl.style.removeProperty('--capture-keyboard-inset');
         updateCaptureLayout();
         if (geocodeTimer) clearTimeout(geocodeTimer);
         geocodeTimer = null;
@@ -646,6 +675,7 @@ window.scoutConfig = {
         sheet.classList.add('show');
         shellEl.classList.add('is-capturing');
         document.body.classList.add('scout-capture-open');
+        shellEl.style.removeProperty('--capture-keyboard-inset');
         updateCaptureLayout();
         setCurrentMarkerVisible(false);
         requestAnimationFrame(() => {
