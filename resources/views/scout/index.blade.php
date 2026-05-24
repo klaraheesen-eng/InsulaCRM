@@ -68,7 +68,26 @@
         z-index: 5;
         pointer-events: none;
     }
-    .scout-status .alert { pointer-events: auto; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+    .scout-status .alert {
+        pointer-events: auto;
+        box-shadow: 0 8px 24px rgba(0,0,0,.35);
+        border: 1px solid rgba(255,255,255,.16);
+        background: rgba(15, 23, 42, .94);
+        color: #fff;
+        font-weight: 700;
+        text-shadow: 0 1px 1px rgba(0,0,0,.45);
+        backdrop-filter: blur(8px);
+    }
+    .scout-status .alert.alert-success { background: rgba(22, 101, 52, .94); }
+    .scout-status .alert.alert-danger { background: rgba(153, 27, 27, .96); }
+    .scout-status .alert.alert-warning { background: rgba(146, 64, 14, .96); }
+    #center-me {
+        background: rgba(255,255,255,.96);
+        color: #0f172a;
+        border-color: #fff;
+        font-weight: 800;
+        box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    }
     .capture-sheet {
         position: absolute;
         left: 0;
@@ -93,7 +112,10 @@
     @media (max-width: 768px) {
         .page-body { margin-top: 0; }
         .scout-shell { height: calc(100vh - 64px); min-height: 520px; margin: -0.75rem; }
-        .scout-toolbar { grid-template-columns: 1fr; }
+        .scout-toolbar {
+            grid-template-columns: 1fr;
+            bottom: calc(82px + env(safe-area-inset-bottom));
+        }
         .scout-toolbar .btn { min-height: 48px; font-size: 1rem; }
     }
 </style>
@@ -117,8 +139,8 @@
         <button type="button" id="capture-house" class="btn btn-primary btn-lg" disabled>
             {{ __('House For Sale') }}
         </button>
-        <button type="button" id="center-me" class="btn btn-outline-light">
-            {{ __('Center On Me') }}
+        <button type="button" id="center-me" class="btn">
+            {{ __('📍 Center On Me') }}
         </button>
         <button type="button" id="stop-scouting" class="btn btn-outline-light" disabled>
             {{ __('Stop') }}
@@ -271,12 +293,18 @@ window.scoutConfig = {
         }
     }
 
-    function requestLocation() {
-        if (!navigator.geolocation) {
-            setStatus('Location is not available on this device.', 'danger');
-            return;
+    function locationErrorMessage(err) {
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            return 'Location needs HTTPS. Open the secure CRM URL, then tap Center On Me again.';
         }
-        setStatus('Asking for location permission…');
+        if (err && err.code === 1) {
+            return 'Location is blocked. On iPhone: tap AA/aA or the lock in Safari → Website Settings → Location → Allow, then reload.';
+        }
+        return 'Location error: ' + (err && err.message ? err.message : 'Could not get your position.');
+    }
+
+    function startLocationWatch() {
+        if (watchId !== null) return;
         watchId = navigator.geolocation.watchPosition(
             pos => {
                 updateCurrentMarker(pos);
@@ -284,8 +312,25 @@ window.scoutConfig = {
                     setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
                 }
             },
-            err => setStatus('Location permission/error: ' + err.message, 'danger'),
+            err => setStatus(locationErrorMessage(err), 'danger'),
             { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        );
+    }
+
+    function requestLocation() {
+        if (!navigator.geolocation) {
+            setStatus('Location is not available on this device.', 'danger');
+            return;
+        }
+        setStatus('Tap Allow if your phone asks for location permission…');
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                updateCurrentMarker(pos);
+                startLocationWatch();
+                setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
+            },
+            err => setStatus(locationErrorMessage(err), 'danger'),
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
         );
     }
 
@@ -497,7 +542,7 @@ window.scoutConfig = {
         map.addListener('idle', () => updateCaptureFromPin());
         captureBtn.disabled = false;
         drawExisting();
-        requestLocation();
+        setStatus('Tap 📍 Center On Me to allow location and move the map to you.', 'info');
         } catch (error) {
             setStatus('Map failed to initialise: ' + error.message, 'danger');
         }
