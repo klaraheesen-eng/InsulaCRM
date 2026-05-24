@@ -11,7 +11,7 @@
  * Bump CACHE_VERSION to invalidate all caches on deploy.
  */
 
-var CACHE_VERSION = 'v1.0.0';
+var CACHE_VERSION = 'v1.0.1';
 var STATIC_CACHE = 'insulacrm-static-' + CACHE_VERSION;
 var DYNAMIC_CACHE = 'insulacrm-dynamic-' + CACHE_VERSION;
 
@@ -92,6 +92,9 @@ self.addEventListener('fetch', function(event) {
 
     // Skip chrome-extension and non-http(s) requests
     if (!request.url.startsWith('http')) return;
+
+    // Scout is a live GPS workflow; never serve it from cache.
+    if (isScoutRequest(request.url)) return;
 
     // Determine strategy based on URL patterns
     if (isStaticAsset(request.url)) {
@@ -192,6 +195,17 @@ function isStaticAsset(url) {
     return STATIC_PATTERNS.some(function(pattern) {
         return pattern.test(url);
     });
+}
+
+/**
+ * Check if a URL is part of the live Scout Utility flow.
+ */
+function isScoutRequest(url) {
+    try {
+        return new URL(url).pathname.indexOf('/scout') === 0;
+    } catch (error) {
+        return false;
+    }
 }
 
 /**
