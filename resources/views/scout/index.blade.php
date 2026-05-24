@@ -271,7 +271,7 @@ window.scoutConfig = {
     let geocodeTimer = null;
     let geocodeRequestId = 0;
     let watchId = null;
-    let trackingTimer = null;
+    let savingPoint = false;
     let wakeLock = null;
     let keepAwakeWanted = false;
     let keepAwakeCanvas = null;
@@ -282,6 +282,7 @@ window.scoutConfig = {
     let tracking = false;
     let followingLocation = false;
     let pendingAddressParts = {};
+    const ROUTE_SAVE_MIN_METERS = 15;
     const pointById = new Map();
     const path = [];
 
@@ -391,6 +392,16 @@ window.scoutConfig = {
             }
             return response.json();
         });
+    }
+
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+        const earthRadius = 6371000;
+        const toRad = degrees => (degrees * Math.PI) / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat / 2) ** 2
+            + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+        return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     async function requestScreenWakeLock() {
@@ -555,8 +566,11 @@ window.scoutConfig = {
                 if (followingLocation && !captureMode && map) {
                     map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
                 }
+                if (tracking) {
+                    savePoint().catch(err => setStatus('Could not save route point: ' + err.message, 'danger'));
+                }
                 if (!captureMode) {
-                    setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
+                    setStatus(tracking ? 'Scouting is running. Route saves every 15 m.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
                 }
             },
             err => {
@@ -602,32 +616,46 @@ window.scoutConfig = {
         if (centerOnSuccess || (!captureMode && !hasCenteredOnLocation && !path.length)) {
             centerMapOnPosition(position);
         }
-        setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
+        setStatus(tracking ? 'Scouting is running. Route saves every 15 m.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
     }
 
-    async function savePoint() {
-        if (!currentPosition || !tracking) return;
-        const body = {
-            session_id: sessionId,
-            previous_point_id: lastPointId,
-            latitude: currentPosition.coords.latitude,
-            longitude: currentPosition.coords.longitude,
-            accuracy: currentPosition.coords.accuracy,
-            captured_at: new Date().toISOString(),
-        };
-        const saved = await authFetch(window.scoutConfig.routes.point, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-        });
-        const latLng = { lat: saved.lat, lng: saved.lng };
-        path.push(latLng);
-        if (path.length === 1) {
-            livePolyline.setPath(path);
-        } else {
-            livePolyline.getPath().push(new google.maps.LatLng(saved.lat, saved.lng));
+    async function savePoint({ force = false } = {}) {
+        if (!currentPosition || !tracking || savingPoint) return;
+
+        const lat = currentPosition.coords.latitude;
+        const lng = currentPosition.coords.longitude;
+        const last = path.length ? path[path.length - 1] : null;
+
+        if (!force && last && distanceMeters(last.lat, last.lng, lat, lng) < ROUTE_SAVE_MIN_METERS) {
+            return;
         }
-        lastPointId = saved.id;
+
+        savingPoint = true;
+        try {
+            const body = {
+                session_id: sessionId,
+                previous_point_id: lastPointId,
+                latitude: lat,
+                longitude: lng,
+                accuracy: currentPosition.coords.accuracy,
+                captured_at: new Date().toISOString(),
+            };
+            const saved = await authFetch(window.scoutConfig.routes.point, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const latLng = { lat: saved.lat, lng: saved.lng };
+            path.push(latLng);
+            if (path.length === 1) {
+                livePolyline.setPath(path);
+            } else {
+                livePolyline.getPath().push(new google.maps.LatLng(saved.lat, saved.lng));
+            }
+            lastPointId = saved.id;
+        } finally {
+            savingPoint = false;
+        }
     }
 
     async function startTracking() {
@@ -659,16 +687,13 @@ window.scoutConfig = {
             strokeOpacity: 0.95,
             strokeWeight: 5,
         });
-        await savePoint();
-        trackingTimer = setInterval(() => savePoint().catch(err => setStatus('Could not save route point: ' + err.message, 'danger')), 10000);
-        setStatus('Scouting started. Route points save every 10 seconds.', 'success');
+        await savePoint({ force: true });
+        setStatus('Scouting started. Route saves when you move 15 m or more.', 'success');
     }
 
     function stopTracking() {
         tracking = false;
         releaseKeepAwake();
-        if (trackingTimer) clearInterval(trackingTimer);
-        trackingTimer = null;
         updateScoutToggleUi();
         setStatus('Scouting stopped. You can start again when ready.', 'info');
     }
