@@ -83,9 +83,20 @@
         right: 12px;
         bottom: calc(12px + env(safe-area-inset-bottom));
         z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .scout-toolbar-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
+    }
+    .scout-toolbar-row .btn {
+        min-height: 46px;
+        font-size: clamp(0.8rem, 3.2vw, 1rem);
+        padding-inline: 0.5rem;
+        white-space: nowrap;
     }
     .scout-status {
         position: absolute;
@@ -114,6 +125,11 @@
         border-color: #fff;
         font-weight: 800;
         box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    }
+    #center-me.is-following {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
     }
     .capture-sheet {
         position: absolute;
@@ -158,7 +174,6 @@
         body.scout-page .navbar-toggler { padding: .25rem .45rem; }
         body.scout-page .page-header { display: none !important; }
         body.scout-page .page-body { margin-top: 0; }
-        .scout-toolbar { grid-template-columns: 1fr; }
         .scout-toolbar .btn { min-height: 46px; font-size: 1rem; }
         .capture-sheet { padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
         .capture-sheet .capture-help { display: none; }
@@ -179,18 +194,17 @@
     </div>
 
     <div class="scout-toolbar">
-        <button type="button" id="start-scouting" class="btn btn-success btn-lg">
-            {{ __('Start Scouting') }}
-        </button>
-        <button type="button" id="capture-house" class="btn btn-primary btn-lg" disabled>
+        <button type="button" id="capture-house" class="btn btn-primary btn-lg w-100" disabled>
             {{ __('House For Sale') }}
         </button>
-        <button type="button" id="center-me" class="btn">
-            {{ __('📍 Center On Me') }}
-        </button>
-        <button type="button" id="stop-scouting" class="btn btn-outline-light" disabled>
-            {{ __('Stop') }}
-        </button>
+        <div class="scout-toolbar-row">
+            <button type="button" id="center-me" class="btn" aria-pressed="false">
+                {{ __('Center') }}
+            </button>
+            <button type="button" id="start-scouting" class="btn btn-success">
+                {{ __('Start') }}
+            </button>
+        </div>
     </div>
 
     <form id="capture-sheet" class="capture-sheet" enctype="multipart/form-data">
@@ -266,6 +280,7 @@ window.scoutConfig = {
     let sessionId = null;
     let lastPointId = null;
     let tracking = false;
+    let followingLocation = false;
     let pendingAddressParts = {};
     const pointById = new Map();
     const path = [];
@@ -274,7 +289,6 @@ window.scoutConfig = {
     document.body.classList.add('scout-page');
     const alertEl = document.getElementById('scout-alert');
     const startBtn = document.getElementById('start-scouting');
-    const stopBtn = document.getElementById('stop-scouting');
     const captureBtn = document.getElementById('capture-house');
     const centerBtn = document.getElementById('center-me');
     const keepAwakeVideo = document.getElementById('scout-keep-awake');
@@ -334,6 +348,26 @@ window.scoutConfig = {
     function setStatus(message, type = 'info') {
         alertEl.className = 'alert alert-' + type + ' py-2 px-3 mb-0';
         alertEl.textContent = message;
+    }
+
+    function setFollowLocation(on) {
+        followingLocation = !!on;
+        centerBtn.classList.toggle('is-following', followingLocation);
+        centerBtn.setAttribute('aria-pressed', followingLocation ? 'true' : 'false');
+        centerBtn.textContent = followingLocation ? '{{ __('Following') }}' : '{{ __('Center') }}';
+    }
+
+    function updateScoutToggleUi() {
+        if (tracking) {
+            startBtn.textContent = '{{ __('Stop') }}';
+            startBtn.classList.remove('btn-success');
+            startBtn.classList.add('btn-danger');
+        } else {
+            startBtn.textContent = '{{ __('Start') }}';
+            startBtn.classList.remove('btn-danger');
+            startBtn.classList.add('btn-success');
+        }
+        startBtn.disabled = false;
     }
 
     function setCaptureSubmitting(busy) {
@@ -495,7 +529,7 @@ window.scoutConfig = {
 
     function locationErrorMessage(err) {
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-            return 'Location needs HTTPS. Open the secure CRM URL, then tap Center On Me again.';
+            return 'Location needs HTTPS. Open the secure CRM URL, then tap Center again.';
         }
 
         if (err && err.code === 1) {
@@ -503,11 +537,11 @@ window.scoutConfig = {
         }
 
         if (err && err.code === 2) {
-            return 'Location unavailable. Move to an open area, check Location Services are on, then tap Center On Me. ' + IPHONE_LOCATION_HINT;
+            return 'Location unavailable. Move to an open area, check Location Services are on, then tap Center. ' + IPHONE_LOCATION_HINT;
         }
 
         if (err && err.code === 3) {
-            return 'Location timed out. Try Center On Me again outdoors or near a window. ' + IPHONE_LOCATION_HINT;
+            return 'Location timed out. Try Center again outdoors or near a window. ' + IPHONE_LOCATION_HINT;
         }
 
         return 'Location error: ' + (err && err.message ? err.message : 'Could not get your position.');
@@ -518,11 +552,17 @@ window.scoutConfig = {
         watchId = navigator.geolocation.watchPosition(
             pos => {
                 updateCurrentMarker(pos);
+                if (followingLocation && !captureMode && map) {
+                    map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+                }
                 if (!captureMode) {
-                    setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
+                    setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
                 }
             },
-            err => setStatus(locationErrorMessage(err), 'danger'),
+            err => {
+                setFollowLocation(false);
+                setStatus(locationErrorMessage(err), 'danger');
+            },
             { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }
         );
     }
@@ -562,7 +602,7 @@ window.scoutConfig = {
         if (centerOnSuccess || (!captureMode && !hasCenteredOnLocation && !path.length)) {
             centerMapOnPosition(position);
         }
-        setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
+        setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start.', tracking ? 'success' : 'info');
     }
 
     async function savePoint() {
@@ -597,6 +637,7 @@ window.scoutConfig = {
             await requestLocation({ centerOnSuccess: true });
             if (!currentPosition) {
                 releaseKeepAwake();
+                updateScoutToggleUi();
                 return;
             }
         }
@@ -609,9 +650,8 @@ window.scoutConfig = {
         }
         sessionId = res.session_id;
         tracking = true;
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
         captureBtn.disabled = false;
+        updateScoutToggleUi();
         livePolyline = new google.maps.Polyline({
             map,
             path: [],
@@ -629,8 +669,7 @@ window.scoutConfig = {
         releaseKeepAwake();
         if (trackingTimer) clearInterval(trackingTimer);
         trackingTimer = null;
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        updateScoutToggleUi();
         setStatus('Scouting stopped. You can start again when ready.', 'info');
     }
 
@@ -840,16 +879,35 @@ window.scoutConfig = {
         captureBtn.disabled = false;
         drawExisting();
         syncScoutViewport();
-        setStatus('Tap 📍 Center On Me to allow location and move the map to you.', 'info');
+        setStatus('Tap Center to follow your location, or Start to begin scouting.', 'info');
         } catch (error) {
             setStatus('Map failed to initialise: ' + error.message, 'danger');
         }
     };
 
-    startBtn.addEventListener('click', () => startTracking().catch(err => setStatus('Could not start scouting: ' + err.message, 'danger')));
-    stopBtn.addEventListener('click', stopTracking);
+    startBtn.addEventListener('click', () => {
+        if (tracking) {
+            stopTracking();
+            return;
+        }
+        startBtn.disabled = true;
+        startTracking().catch(err => {
+            tracking = false;
+            releaseKeepAwake();
+            updateScoutToggleUi();
+            setStatus('Could not start scouting: ' + err.message, 'danger');
+        });
+    });
     centerBtn.addEventListener('click', () => {
-        requestLocation({ centerOnSuccess: true }).catch(err => setStatus('Could not get location: ' + err.message, 'danger'));
+        if (followingLocation) {
+            setFollowLocation(false);
+            return;
+        }
+        setFollowLocation(true);
+        requestLocation({ centerOnSuccess: true }).catch(err => {
+            setFollowLocation(false);
+            setStatus('Could not get location: ' + err.message, 'danger');
+        });
     });
     captureBtn.addEventListener('click', beginCapture);
     document.getElementById('cancel-capture').addEventListener('click', closeCapture);
