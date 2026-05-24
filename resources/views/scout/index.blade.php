@@ -488,7 +488,8 @@ window.scoutConfig = {
                 map,
                 position: { lat: property.lat, lng: property.lng },
                 title: property.address || 'CRM property',
-                icon: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                zIndex: 850,
             });
             const links = [
                 property.property_url ? `<a href="${property.property_url}">Open property</a>` : '',
@@ -508,6 +509,7 @@ window.scoutConfig = {
                 position: { lat: capture.lat, lng: capture.lng },
                 title: capture.address || 'Scouted lead',
                 icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                zIndex: 900,
             });
             const info = new google.maps.InfoWindow({
                 content: `<strong>${capture.address || 'Scouted lead'}</strong><br><a href="${capture.lead_url}">Open lead</a>`,

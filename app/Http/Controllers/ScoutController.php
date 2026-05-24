@@ -22,7 +22,7 @@ class ScoutController extends Controller
             ->where('user_id', auth()->id())
             ->where('captured_at', '>=', now()->subDays(30))
             ->whereNotIn('id', ScoutLeadCapture::query()
-                ->where('user_id', auth()->id())
+                ->where('tenant_id', auth()->user()->tenant_id)
                 ->whereNotNull('scout_point_id')
                 ->select('scout_point_id'))
             ->orderBy('captured_at')
@@ -39,7 +39,7 @@ class ScoutController extends Controller
 
         $captures = ScoutLeadCapture::query()
             ->with('lead')
-            ->where('user_id', auth()->id())
+            ->where('tenant_id', auth()->user()->tenant_id)
             ->latest()
             ->limit(300)
             ->get()
@@ -57,9 +57,6 @@ class ScoutController extends Controller
             ->with('lead:id,tenant_id,agent_id,first_name,last_name,status')
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->when(auth()->user()->isAgent(), function ($query) {
-                $query->whereHas('lead', fn ($leadQuery) => $leadQuery->where('agent_id', auth()->id()));
-            })
             ->latest('updated_at')
             ->limit(500)
             ->get()
