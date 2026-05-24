@@ -11,6 +11,7 @@ use App\Models\Deal;
 use App\Models\Lead;
 use App\Models\LeadClaim;
 use App\Models\LeadPhoto;
+use App\Models\OfficeLookupRequest;
 use App\Models\Property;
 use App\Models\Role;
 use App\Models\User;
@@ -258,6 +259,87 @@ class LeadController extends Controller
         $sequences = \App\Models\Sequence::where('is_active', true)->get();
         $assignmentHistory = app(AssignmentHistoryService::class)->getHistory($lead);
         return view('leads.show', compact('lead', 'sequences', 'assignmentHistory'));
+    }
+
+    public function officeLookupWhatsApp(Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        if (! $this->isUnknownOwnerLookupCandidate($lead)) {
+            return redirect()->route('leads.show', $lead)
+                ->with('error', __('Office lookup requests are only available for unknown-owner leads without contact details.'));
+        }
+
+        $tenant = auth()->user()->tenant;
+        $officePhone = $this->formatOfficeLookupWhatsAppPhone((string) $tenant->office_address_lookup_phone);
+
+        if (! $officePhone) {
+            return redirect()->route('leads.show', $lead)
+                ->with('error', __('Add the office address lookup WhatsApp number in Settings first.'));
+        }
+
+        $lead->loadMissing('property');
+        $lookup = OfficeLookupRequest::createForLead($lead, auth()->id());
+        $property = $lead->property;
+        $address = $property?->full_address ?: $property?->address ?: __('Address not available');
+        $coordinates = null;
+
+        if ($property && preg_match('/Scout coordinates:\s*([-0-9.]+),\s*([-0-9.]+)/', (string) $property->notes, $matches)) {
+            $coordinates = $matches[1] . ',' . $matches[2];
+        }
+
+        $mapsUrl = $coordinates
+            ? 'https://www.google.com/maps/search/?api=1&query=' . urlencode($coordinates)
+            : 'https://www.google.com/maps/search/?api=1&query=' . urlencode($address);
+
+        $message = implode("\n\n", array_filter([
+            "Hi, please look up the owner/client details and contact number for this property.",
+            "Lead: #{$lead->id} ({$lead->full_name})",
+            "Address: {$address}",
+            "Google Maps: {$mapsUrl}",
+            "Update form (expires in 72 hours): " . route('office-lookup.show', $lookup->token),
+        ]));
+
+        Activity::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'agent_id' => auth()->id(),
+            'type' => 'note',
+            'subject' => __('Office lookup requested'),
+            'body' => __('Office lookup WhatsApp prepared for :address. Link expires in 72 hours.', ['address' => $address]),
+            'logged_at' => now(),
+        ]);
+
+        return redirect()->away('https://wa.me/' . $officePhone . '?text=' . rawurlencode($message));
+    }
+
+    private function isUnknownOwnerLookupCandidate(Lead $lead): bool
+    {
+        $name = strtolower(trim($lead->full_name));
+
+        return ($name === 'unknown owner' || str_contains($name, 'unknown'))
+            && blank($lead->phone)
+            && blank($lead->secondary_phone)
+            && blank($lead->email);
+    }
+
+    private function formatOfficeLookupWhatsAppPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?: '';
+
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '0')) {
+            return '27' . substr($digits, 1);
+        }
+
+        return $digits;
     }
 
     public function createTransaction(Lead $lead)

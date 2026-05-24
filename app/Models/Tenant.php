@@ -26,6 +26,7 @@ class Tenant extends Model
         'date_format',
         'country',
         'measurement_system',
+        'office_address_lookup_phone',
         'locale',
         'distribution_method',
         'claim_window_minutes',

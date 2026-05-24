@@ -35,6 +35,7 @@ use App\Http\Controllers\SsoController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\WhatsAppTemplateController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OfficeLookupController;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\ApiDocsController;
 use App\Http\Controllers\PdfExportController;
@@ -85,6 +86,10 @@ Route::post('/install/complete/snapshot', [InstallController::class, 'createInit
 // Public lead capture web forms
 Route::get('/forms/{api_key}', [WebFormController::class, 'show'])->name('forms.show');
 Route::post('/forms/{api_key}', [WebFormController::class, 'submit'])->middleware('throttle:10,1')->name('forms.submit');
+
+// Public office lookup magic links (no auth)
+Route::get('/office-lookup/{token}', [OfficeLookupController::class, 'show'])->name('office-lookup.show');
+Route::post('/office-lookup/{token}', [OfficeLookupController::class, 'update'])->middleware('throttle:10,1')->name('office-lookup.update');
 
 // Public buyer portal (no auth)
 Route::get('/p/{slug}', [BuyerPortalController::class, 'show'])->name('buyer-portal.show');
@@ -264,6 +269,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::patch('/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.updateStatus');
         Route::patch('/leads/{lead}/custom-field', [LeadController::class, 'updateCustomField'])->name('leads.updateCustomField');
         Route::post('/leads/{lead}/claim', [LeadController::class, 'claim'])->name('leads.claim');
+        Route::post('/leads/{lead}/office-lookup-whatsapp', [LeadController::class, 'officeLookupWhatsApp'])->name('leads.officeLookupWhatsApp');
 
         // Activities on leads
         Route::post('/leads/{lead}/activities', [ActivityController::class, 'store'])->name('leads.activities.store');

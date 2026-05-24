@@ -20,6 +20,7 @@ class GeneralSettingsRequest extends FormRequest
             'date_format' => 'nullable|string|max:20',
             'country' => 'nullable|string|max:2',
             'measurement_system' => 'nullable|in:imperial,metric',
+            'office_address_lookup_phone' => 'nullable|string|max:50',
             'locale' => 'nullable|string|max:10',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
         ];

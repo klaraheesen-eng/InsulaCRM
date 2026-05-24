@@ -65,7 +65,7 @@ class SettingsController extends Controller
     {
         $tenant = auth()->user()->tenant;
 
-        $data = $request->only(['name', 'timezone', 'currency', 'date_format', 'country', 'measurement_system', 'locale']);
+        $data = $request->only(['name', 'timezone', 'currency', 'date_format', 'country', 'measurement_system', 'office_address_lookup_phone', 'locale']);
 
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('logos', 'public');

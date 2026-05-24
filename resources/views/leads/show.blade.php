@@ -475,6 +475,21 @@
                     @endif
                     <hr class="my-1">
 
+                    @php
+                        $isUnknownOwner = strtolower(trim($lead->full_name)) === 'unknown owner' || (!$lead->phone && str_contains(strtolower($lead->full_name), 'unknown'));
+                    @endphp
+                    @if($isUnknownOwner)
+                    <small class="text-uppercase text-secondary fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ __('Office Lookup') }}</small>
+                    <form method="POST" action="{{ route('leads.officeLookupWhatsApp', $lead) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-success w-100" style="background-color: #25d366; border-color: #25d366;">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/></svg>
+                            {{ __('Ask Office to Lookup Owner') }}
+                        </button>
+                    </form>
+                    <hr class="my-1">
+                    @endif
+
                     {{-- Contact --}}
                     @if((($lead->phone || $lead->secondary_phone) && !$lead->do_not_contact) || ($lead->email && !$lead->do_not_contact))
                     <small class="text-uppercase text-secondary fw-bold" style="font-size: 0.7rem; letter-spacing: 0.05em;">{{ __('Contact') }}</small>

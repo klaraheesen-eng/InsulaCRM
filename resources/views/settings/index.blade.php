@@ -142,6 +142,13 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-4">
+                            <label class="form-label">{{ __('Office Address Lookup WhatsApp') }}</label>
+                            <input type="tel" name="office_address_lookup_phone" class="form-control" value="{{ old('office_address_lookup_phone', $tenant->office_address_lookup_phone) }}" placeholder="{{ __('27820000000') }}">
+                            <small class="form-hint">{{ __('Used for Unknown Owner lookup requests. Use international format, e.g. 2782...') }}</small>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
                             <label class="form-label">{{ __('Currency') }}</label>
                             <select name="currency" class="form-select">
                                 @foreach(\Fmt::currencies() as $code => $label)
