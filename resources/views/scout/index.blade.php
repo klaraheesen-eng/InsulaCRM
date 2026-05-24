@@ -29,7 +29,8 @@
         padding: 0;
     }
     body.scout-page #quick-add-fab,
-    body.scout-page #pwa-install-banner { display: none !important; }
+    body.scout-page #pwa-install-banner,
+    body.scout-page #pwa-update-banner { display: none !important; }
     .scout-shell {
         position: relative;
         height: var(--scout-available-height, calc(100dvh - 96px));
@@ -123,22 +124,39 @@
         background: var(--tblr-bg-surface, #fff);
         border-radius: 18px 18px 0 0;
         box-shadow: 0 -12px 30px rgba(0,0,0,.25);
-        padding: 16px;
-        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        padding: 12px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
         display: none;
     }
     .capture-sheet.show { display: block; }
-    .scout-shell.is-capturing .scout-toolbar { display: none; }
+    .capture-sheet h3 { font-size: 1.05rem; margin-bottom: .25rem !important; }
+    .capture-sheet .form-label { margin-bottom: .25rem; }
+    .capture-sheet .mb-2 { margin-bottom: .45rem !important; }
+    .capture-sheet .mb-3 { margin-bottom: .55rem !important; }
+    .scout-shell.is-capturing .scout-toolbar,
+    .scout-shell.is-capturing .scout-status { display: none; }
     body.scout-capture-open #quick-add-fab,
-    body.scout-capture-open #pwa-install-banner { display: none !important; }
+    body.scout-capture-open #pwa-install-banner,
+    body.scout-capture-open #pwa-update-banner { display: none !important; }
     .capture-address-bar {
-        min-height: 48px;
+        min-height: 42px;
         font-size: 1rem;
     }
     @media (max-width: 768px) {
+        body.scout-page .navbar {
+            min-height: 52px;
+            padding-top: max(4px, env(safe-area-inset-top));
+            padding-bottom: 4px;
+        }
+        body.scout-page .navbar .container-fluid { min-height: 44px; }
+        body.scout-page .navbar-brand img { max-height: 34px !important; max-width: 120px !important; }
+        body.scout-page .navbar-toggler { padding: .25rem .45rem; }
+        body.scout-page .page-header { display: none !important; }
         body.scout-page .page-body { margin-top: 0; }
         .scout-toolbar { grid-template-columns: 1fr; }
-        .scout-toolbar .btn { min-height: 48px; font-size: 1rem; }
+        .scout-toolbar .btn { min-height: 46px; font-size: 1rem; }
+        .capture-sheet { padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        .capture-sheet .capture-help { display: none; }
     }
 </style>
 @endpush
@@ -171,7 +189,7 @@
 
     <form id="capture-sheet" class="capture-sheet" enctype="multipart/form-data">
         <h3 class="mb-2">{{ __('Capture House For Sale') }}</h3>
-        <p class="text-secondary small mb-2">{{ __('Move the pin onto the house, confirm the address, then take a photo.') }}</p>
+        <p class="text-secondary small mb-2 capture-help">{{ __('Move the red pin onto the house, confirm the address, then take a photo.') }}</p>
         <div class="mb-2">
             <label class="form-label">{{ __('Address') }}</label>
             <input id="capture-address" name="address" class="form-control capture-address-bar" placeholder="{{ __('Address from pin') }}">
@@ -612,6 +630,7 @@ window.scoutConfig = {
         if (geocodeTimer) clearTimeout(geocodeTimer);
         geocodeTimer = null;
         if (currentPosition) setCurrentMarkerVisible(true);
+        if (!tracking) setStatus('Location ready. Tap House For Sale to capture another property.', 'info');
     }
 
     function beginCapture() {
@@ -636,7 +655,7 @@ window.scoutConfig = {
                 updateCaptureFromPin(0);
             });
         });
-        setStatus('Move the red pin from your current location onto the house. The address updates below.', 'info');
+        setStatus('Move the red pin onto the house. The address updates below.', 'info');
     }
 
     async function submitCapture(event) {
