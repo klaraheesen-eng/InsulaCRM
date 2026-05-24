@@ -850,14 +850,8 @@ window.scoutConfig = {
         try {
             const form = new FormData(sheet);
             form.append('session_id', sessionId || '');
-            form.append('previous_point_id', lastPointId || '');
             const res = await authFetch(window.scoutConfig.routes.capture, { method: 'POST', body: form });
 
-            if (livePolyline && res.lat && res.lng) {
-                livePolyline.getPath().push(new google.maps.LatLng(res.lat, res.lng));
-                path.push({ lat: res.lat, lng: res.lng });
-            }
-            lastPointId = res.point_id;
             const marker = new google.maps.Marker({
                 map,
                 position: { lat: res.lat, lng: res.lng },

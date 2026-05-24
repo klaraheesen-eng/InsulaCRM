@@ -21,6 +21,10 @@ class ScoutController extends Controller
         $points = ScoutPoint::query()
             ->where('user_id', auth()->id())
             ->where('captured_at', '>=', now()->subDays(30))
+            ->whereNotIn('id', ScoutLeadCapture::query()
+                ->where('user_id', auth()->id())
+                ->whereNotNull('scout_point_id')
+                ->select('scout_point_id'))
             ->orderBy('captured_at')
             ->limit(3000)
             ->get()
@@ -139,7 +143,6 @@ class ScoutController extends Controller
     {
         $data = $request->validate([
             'session_id' => 'nullable|integer|exists:scout_sessions,id',
-            'previous_point_id' => 'nullable|integer|exists:scout_points,id',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
             'address' => 'nullable|string|max:255',
@@ -156,7 +159,7 @@ class ScoutController extends Controller
                 'tenant_id' => auth()->user()->tenant_id,
                 'scout_session_id' => $data['session_id'] ?? null,
                 'user_id' => auth()->id(),
-                'previous_point_id' => $data['previous_point_id'] ?? null,
+                'previous_point_id' => null,
                 'latitude' => $data['latitude'],
                 'longitude' => $data['longitude'],
                 'captured_at' => now(),
