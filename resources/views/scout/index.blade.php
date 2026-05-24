@@ -461,9 +461,9 @@ window.scoutConfig = {
             new google.maps.Polyline({
                 map,
                 path: [{ lat: prev.lat, lng: prev.lng }, { lat: p.lat, lng: p.lng }],
-                strokeColor: '#64748b',
-                strokeOpacity: 0.65,
-                strokeWeight: 4,
+                strokeColor: '#16a34a',
+                strokeOpacity: 0.9,
+                strokeWeight: 5,
             });
         });
 
