@@ -209,7 +209,7 @@
             <input id="capture-photo" type="file" name="photo" class="form-control" accept="image/*" capture="environment">
         </div>
         <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill">{{ __('Create Lead') }}</button>
+            <button type="submit" id="submit-capture" class="btn btn-primary flex-fill">{{ __('Create Lead') }}</button>
             <button type="button" id="cancel-capture" class="btn btn-outline-secondary">{{ __('Cancel') }}</button>
         </div>
     </form>
@@ -272,6 +272,10 @@ window.scoutConfig = {
     const captureBtn = document.getElementById('capture-house');
     const centerBtn = document.getElementById('center-me');
     const sheet = document.getElementById('capture-sheet');
+    const submitBtn = document.getElementById('submit-capture');
+    const cancelBtn = document.getElementById('cancel-capture');
+    const submitBtnDefaultHtml = submitBtn.innerHTML;
+    let captureSubmitting = false;
     const centerPinEl = document.getElementById('capture-center-pin');
     const addressEl = document.getElementById('capture-address');
     const latEl = document.getElementById('capture-latitude');
@@ -323,6 +327,15 @@ window.scoutConfig = {
     function setStatus(message, type = 'info') {
         alertEl.className = 'alert alert-' + type + ' py-2 px-3 mb-0';
         alertEl.textContent = message;
+    }
+
+    function setCaptureSubmitting(busy) {
+        captureSubmitting = busy;
+        submitBtn.disabled = busy;
+        cancelBtn.disabled = busy;
+        submitBtn.innerHTML = busy
+            ? '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>{{ __('Creating…') }}'
+            : submitBtnDefaultHtml;
     }
 
     function authFetch(url, options = {}) {
@@ -658,6 +671,7 @@ window.scoutConfig = {
         updateCaptureLayout();
         if (geocodeTimer) clearTimeout(geocodeTimer);
         geocodeTimer = null;
+        setCaptureSubmitting(false);
         if (currentPosition) setCurrentMarkerVisible(true);
         if (!tracking) setStatus('Location ready. Tap House For Sale to capture another property.', 'info');
     }
@@ -690,25 +704,41 @@ window.scoutConfig = {
 
     async function submitCapture(event) {
         event.preventDefault();
-        const form = new FormData(sheet);
-        form.append('session_id', sessionId || '');
-        form.append('previous_point_id', lastPointId || '');
-        const res = await authFetch(window.scoutConfig.routes.capture, { method: 'POST', body: form });
-        if (livePolyline && res.lat && res.lng) {
-            livePolyline.getPath().push(new google.maps.LatLng(res.lat, res.lng));
-            path.push({ lat: res.lat, lng: res.lng });
+        if (captureSubmitting) return;
+
+        setCaptureSubmitting(true);
+        try {
+            const form = new FormData(sheet);
+            form.append('session_id', sessionId || '');
+            form.append('previous_point_id', lastPointId || '');
+            const res = await authFetch(window.scoutConfig.routes.capture, { method: 'POST', body: form });
+
+            if (livePolyline && res.lat && res.lng) {
+                livePolyline.getPath().push(new google.maps.LatLng(res.lat, res.lng));
+                path.push({ lat: res.lat, lng: res.lng });
+            }
+            lastPointId = res.point_id;
+            const marker = new google.maps.Marker({
+                map,
+                position: { lat: res.lat, lng: res.lng },
+                title: res.address || 'Scouted lead',
+                icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+            });
+            if (res.lead_url) {
+                const info = new google.maps.InfoWindow({
+                    content: `<strong>${res.address || 'Scouted lead'}</strong><br><a href="${res.lead_url}">Open lead</a>`,
+                });
+                marker.addListener('click', () => info.open({ map, anchor: marker }));
+            }
+
+            closeCapture();
+            sheet.reset();
+            setStatus(tracking ? 'Lead created. Tracking is still running — tap House For Sale for the next property.' : 'Lead created. Tap House For Sale to capture another property.', 'success');
+        } catch (err) {
+            setStatus('Could not create lead: ' + err.message, 'danger');
+        } finally {
+            setCaptureSubmitting(false);
         }
-        lastPointId = res.point_id;
-        new google.maps.Marker({
-            map,
-            position: { lat: res.lat, lng: res.lng },
-            title: res.address || 'Scouted lead',
-            icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
-        });
-        closeCapture();
-        sheet.reset();
-        setStatus('Lead created from scout capture. Opening lead…', 'success');
-        setTimeout(() => { window.location.href = res.lead_url; }, 700);
     }
 
     window.initScoutMap = function () {
