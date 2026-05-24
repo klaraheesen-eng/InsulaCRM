@@ -5,13 +5,39 @@
 
 @push('styles')
 <style>
+    body.scout-page {
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+    body.scout-page .page-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+    body.scout-page .page-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    body.scout-page .page-body > .container-xl {
+        height: 100%;
+        max-width: none;
+        padding: 0;
+    }
+    body.scout-page #quick-add-fab,
+    body.scout-page #pwa-install-banner { display: none !important; }
     .scout-shell {
         position: relative;
-        height: calc(100vh - 96px);
-        min-height: 620px;
-        margin: -1rem;
+        height: var(--scout-available-height, calc(100dvh - 96px));
+        min-height: 0;
+        margin: 0;
         overflow: hidden;
         background: #111827;
+        touch-action: none;
     }
     #scout-map { width: 100%; height: 100%; }
     .capture-center-pin {
@@ -110,12 +136,8 @@
         font-size: 1rem;
     }
     @media (max-width: 768px) {
-        .page-body { margin-top: 0; }
-        .scout-shell { height: calc(100vh - 64px); min-height: 520px; margin: -0.75rem; }
-        .scout-toolbar {
-            grid-template-columns: 1fr;
-            bottom: calc(82px + env(safe-area-inset-bottom));
-        }
+        body.scout-page .page-body { margin-top: 0; }
+        .scout-toolbar { grid-template-columns: 1fr; }
         .scout-toolbar .btn { min-height: 48px; font-size: 1rem; }
     }
 </style>
@@ -220,6 +242,7 @@ window.scoutConfig = {
     const path = [];
 
     const shellEl = document.querySelector('.scout-shell');
+    document.body.classList.add('scout-page');
     const alertEl = document.getElementById('scout-alert');
     const startBtn = document.getElementById('start-scouting');
     const stopBtn = document.getElementById('stop-scouting');
@@ -233,6 +256,23 @@ window.scoutConfig = {
     const cityEl = document.getElementById('capture-city');
     const stateEl = document.getElementById('capture-state');
     const zipEl = document.getElementById('capture-zip');
+
+    function syncScoutViewport() {
+        if (!shellEl) return;
+        const viewport = window.visualViewport;
+        const top = shellEl.getBoundingClientRect().top;
+        const height = viewport ? viewport.height + viewport.offsetTop : window.innerHeight;
+        const available = Math.max(260, Math.round(height - top));
+        shellEl.style.setProperty('--scout-available-height', available + 'px');
+    }
+
+    syncScoutViewport();
+    window.addEventListener('resize', syncScoutViewport);
+    window.addEventListener('orientationchange', () => setTimeout(syncScoutViewport, 250));
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncScoutViewport);
+        window.visualViewport.addEventListener('scroll', syncScoutViewport);
+    }
 
     function setStatus(message, type = 'info') {
         alertEl.className = 'alert alert-' + type + ' py-2 px-3 mb-0';
@@ -283,6 +323,17 @@ window.scoutConfig = {
         });
     }
 
+    function currentLocationIcon() {
+        return {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 11,
+            fillColor: '#4285f4',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+        };
+    }
+
     function updateCurrentMarker(position) {
         currentPosition = position;
         const latLng = { lat: position.coords.latitude, lng: position.coords.longitude };
@@ -291,17 +342,14 @@ window.scoutConfig = {
                 map,
                 position: latLng,
                 title: 'You are here',
-                icon: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                icon: currentLocationIcon(),
+                optimized: false,
+                zIndex: 999,
             });
         } else {
             currentMarker.setPosition(latLng);
         }
         captureBtn.disabled = false;
-        if (!captureMode && !hasCenteredOnLocation && !path.length) {
-            map.setCenter(latLng);
-            map.setZoom(17);
-            hasCenteredOnLocation = true;
-        }
     }
 
     const IPHONE_LOCATION_HINT = 'On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using, and turn Precise Location ON. In Safari: tap aA → Website Settings → Location → Allow, then reload.';
@@ -309,7 +357,7 @@ window.scoutConfig = {
     function centerMapOnPosition(position) {
         if (!map || !position) return;
         const latLng = { lat: position.coords.latitude, lng: position.coords.longitude };
-        map.panTo(latLng);
+        map.setCenter(latLng);
         map.setZoom(17);
         hasCenteredOnLocation = true;
     }
@@ -386,7 +434,9 @@ window.scoutConfig = {
 
         updateCurrentMarker(position);
         startLocationWatch();
-        if (centerOnSuccess) centerMapOnPosition(position);
+        if (centerOnSuccess || (!captureMode && !hasCenteredOnLocation && !path.length)) {
+            centerMapOnPosition(position);
+        }
         setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
     }
 
@@ -596,8 +646,10 @@ window.scoutConfig = {
         pinProjectionOverlay.onRemove = function () {};
         pinProjectionOverlay.setMap(map);
         map.addListener('idle', () => updateCaptureFromPin());
+        map.addListener('tilesloaded', syncScoutViewport);
         captureBtn.disabled = false;
         drawExisting();
+        syncScoutViewport();
         setStatus('Tap 📍 Center On Me to allow location and move the map to you.', 'info');
         } catch (error) {
             setStatus('Map failed to initialise: ' + error.message, 'danger');
