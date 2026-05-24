@@ -49,11 +49,15 @@ class ScoutController extends Controller
                 'created_at' => $capture->created_at->toIso8601String(),
             ]);
 
-        return view('scout.index', [
-            'googleMapsKey' => config('services.google_maps.browser_key'),
-            'existingPoints' => $points,
-            'existingCaptures' => $captures,
-        ]);
+        return response()
+            ->view('scout.index', [
+                'googleMapsKey' => config('services.google_maps.browser_key'),
+                'existingPoints' => $points,
+                'existingCaptures' => $captures,
+            ])
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     public function reverseGeocode(Request $request)

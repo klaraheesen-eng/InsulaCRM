@@ -193,6 +193,17 @@ window.scoutConfig = {
 };
 
 (function () {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations()
+            .then(registrations => registrations.forEach(registration => registration.unregister()))
+            .catch(() => {});
+    }
+    if (window.caches) {
+        caches.keys()
+            .then(keys => keys.filter(key => key.startsWith('insulacrm-')).forEach(key => caches.delete(key)))
+            .catch(() => {});
+    }
+
     let map, geocoder, pinProjectionOverlay, currentMarker, captureMarker, livePolyline;
     let currentPosition = null;
     let captureMode = false;
