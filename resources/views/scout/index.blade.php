@@ -465,6 +465,8 @@ window.scoutConfig = {
 
     function drawExisting() {
         const points = window.scoutConfig.existingPoints || [];
+        const markerBounds = new google.maps.LatLngBounds();
+        let markerCount = 0;
         points.forEach(p => pointById.set(Number(p.id), p));
 
         points.forEach(p => {
@@ -488,9 +490,11 @@ window.scoutConfig = {
                 map,
                 position: { lat: property.lat, lng: property.lng },
                 title: property.address || 'CRM property',
-                icon: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                icon: crmPropertyIcon(),
                 zIndex: 850,
             });
+            markerBounds.extend({ lat: property.lat, lng: property.lng });
+            markerCount += 1;
             const links = [
                 property.property_url ? `<a href="${property.property_url}">Open property</a>` : '',
                 property.lead_url ? `<a href="${property.lead_url}">Open lead</a>` : '',
@@ -508,14 +512,45 @@ window.scoutConfig = {
                 map,
                 position: { lat: capture.lat, lng: capture.lng },
                 title: capture.address || 'Scouted lead',
-                icon: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png',
+                icon: scoutCaptureIcon(),
                 zIndex: 900,
             });
+            markerBounds.extend({ lat: capture.lat, lng: capture.lng });
+            markerCount += 1;
             const info = new google.maps.InfoWindow({
                 content: `<strong>${capture.address || 'Scouted lead'}</strong><br><a href="${capture.lead_url}">Open lead</a>`,
             });
             marker.addListener('click', () => info.open({ map, anchor: marker }));
         });
+
+        if (markerCount && !currentPosition && !hasCenteredOnLocation) {
+            map.fitBounds(markerBounds, 48);
+            google.maps.event.addListenerOnce(map, 'idle', () => {
+                if (map.getZoom() > 16) map.setZoom(16);
+            });
+        }
+    }
+
+    function crmPropertyIcon() {
+        return {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#ef4444',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+        };
+    }
+
+    function scoutCaptureIcon() {
+        return {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 9,
+            fillColor: '#22c55e',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+        };
     }
 
     function currentLocationIcon() {
