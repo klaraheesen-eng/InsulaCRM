@@ -304,13 +304,39 @@ window.scoutConfig = {
         }
     }
 
+    const IPHONE_LOCATION_HINT = 'On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using, and turn Precise Location ON. In Safari: tap aA → Website Settings → Location → Allow, then reload.';
+
+    function centerMapOnPosition(position) {
+        if (!map || !position) return;
+        const latLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+        map.panTo(latLng);
+        map.setZoom(17);
+        hasCenteredOnLocation = true;
+    }
+
+    function getPositionOnce(options) {
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+    }
+
     function locationErrorMessage(err) {
         if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
             return 'Location needs HTTPS. Open the secure CRM URL, then tap Center On Me again.';
         }
+
         if (err && err.code === 1) {
-            return 'Location is blocked. On iPhone: tap AA/aA or the lock in Safari → Website Settings → Location → Allow, then reload.';
+            return 'Location is blocked for this site. ' + IPHONE_LOCATION_HINT;
         }
+
+        if (err && err.code === 2) {
+            return 'Location unavailable. Move to an open area, check Location Services are on, then tap Center On Me. ' + IPHONE_LOCATION_HINT;
+        }
+
+        if (err && err.code === 3) {
+            return 'Location timed out. Try Center On Me again outdoors or near a window. ' + IPHONE_LOCATION_HINT;
+        }
+
         return 'Location error: ' + (err && err.message ? err.message : 'Could not get your position.');
     }
 
@@ -324,25 +350,44 @@ window.scoutConfig = {
                 }
             },
             err => setStatus(locationErrorMessage(err), 'danger'),
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+            { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }
         );
     }
 
-    function requestLocation() {
+    async function requestLocation(options = {}) {
+        const centerOnSuccess = !!options.centerOnSuccess;
+
         if (!navigator.geolocation) {
             setStatus('Location is not available on this device.', 'danger');
             return;
         }
-        setStatus('Tap Allow if your phone asks for location permission…');
-        navigator.geolocation.getCurrentPosition(
-            pos => {
-                updateCurrentMarker(pos);
-                startLocationWatch();
-                setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
-            },
-            err => setStatus(locationErrorMessage(err), 'danger'),
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-        );
+
+        setStatus('Getting your location… keep Safari open and tap Allow if asked.');
+        const preciseOptions = { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 };
+        const approximateOptions = { enableHighAccuracy: false, maximumAge: 30000, timeout: 20000 };
+        let position;
+
+        try {
+            position = await getPositionOnce(preciseOptions);
+        } catch (err) {
+            if (err && (err.code === 2 || err.code === 3)) {
+                setStatus('Precise location failed. Trying approximate location…', 'warning');
+                try {
+                    position = await getPositionOnce(approximateOptions);
+                } catch (fallbackErr) {
+                    setStatus(locationErrorMessage(fallbackErr), 'danger');
+                    return;
+                }
+            } else {
+                setStatus(locationErrorMessage(err), 'danger');
+                return;
+            }
+        }
+
+        updateCurrentMarker(position);
+        startLocationWatch();
+        if (centerOnSuccess) centerMapOnPosition(position);
+        setStatus(tracking ? 'Scouting is running. Saving your route every 10 seconds.' : 'Location ready. Tap Start Scouting.', tracking ? 'success' : 'info');
     }
 
     async function savePoint() {
@@ -372,9 +417,9 @@ window.scoutConfig = {
 
     async function startTracking() {
         if (!currentPosition) {
-            requestLocation();
             setStatus('Waiting for your location before starting…');
-            return;
+            await requestLocation({ centerOnSuccess: true });
+            if (!currentPosition) return;
         }
         const res = await authFetch(window.scoutConfig.routes.session, { method: 'POST' });
         sessionId = res.session_id;
@@ -562,8 +607,7 @@ window.scoutConfig = {
     startBtn.addEventListener('click', () => startTracking().catch(err => setStatus('Could not start scouting: ' + err.message, 'danger')));
     stopBtn.addEventListener('click', stopTracking);
     centerBtn.addEventListener('click', () => {
-        if (currentPosition) map.panTo({ lat: currentPosition.coords.latitude, lng: currentPosition.coords.longitude });
-        else requestLocation();
+        requestLocation({ centerOnSuccess: true }).catch(err => setStatus('Could not get location: ' + err.message, 'danger'));
     });
     captureBtn.addEventListener('click', beginCapture);
     document.getElementById('cancel-capture').addEventListener('click', closeCapture);
