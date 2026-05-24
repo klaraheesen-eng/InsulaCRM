@@ -349,6 +349,7 @@ window.scoutConfig = {
         } else {
             currentMarker.setPosition(latLng);
         }
+        currentMarker.setVisible(!captureMode);
         captureBtn.disabled = false;
     }
 
@@ -531,18 +532,45 @@ window.scoutConfig = {
         });
     }
 
+    function getPinTipContainerPixel() {
+        const mapRect = map.getDiv().getBoundingClientRect();
+        const pinRect = centerPinEl.getBoundingClientRect();
+
+        return new google.maps.Point(
+            pinRect.left + (pinRect.width / 2) - mapRect.left,
+            pinRect.bottom - mapRect.top
+        );
+    }
+
     function getPinnedLatLng() {
         const projection = pinProjectionOverlay && pinProjectionOverlay.getProjection();
         if (!projection || !centerPinEl.classList.contains('show')) return map.getCenter();
 
-        const mapRect = map.getDiv().getBoundingClientRect();
-        const pinRect = centerPinEl.getBoundingClientRect();
-        const pinTip = new google.maps.Point(
-            pinRect.left + (pinRect.width / 2) - mapRect.left,
-            pinRect.bottom - mapRect.top
-        );
+        return projection.fromContainerPixelToLatLng(getPinTipContainerPixel()) || map.getCenter();
+    }
 
-        return projection.fromContainerPixelToLatLng(pinTip) || map.getCenter();
+    function panMapSoPinTipIsAt(latLng) {
+        const projection = pinProjectionOverlay && pinProjectionOverlay.getProjection();
+        const target = latLng instanceof google.maps.LatLng ? latLng : new google.maps.LatLng(latLng.lat, latLng.lng);
+
+        if (!projection || !centerPinEl.classList.contains('show')) {
+            map.panTo(target);
+            return;
+        }
+
+        const pinTip = getPinTipContainerPixel();
+        const targetPixel = projection.fromLatLngToContainerPixel(target);
+        const centerPixel = projection.fromLatLngToContainerPixel(map.getCenter());
+        const newCenter = projection.fromContainerPixelToLatLng(new google.maps.Point(
+            centerPixel.x + (pinTip.x - targetPixel.x),
+            centerPixel.y + (pinTip.y - targetPixel.y)
+        ));
+
+        map.panTo(newCenter || target);
+    }
+
+    function setCurrentMarkerVisible(visible) {
+        if (currentMarker) currentMarker.setVisible(!!visible);
     }
 
     function geocodePin(latLng) {
@@ -583,11 +611,12 @@ window.scoutConfig = {
         updateCaptureLayout();
         if (geocodeTimer) clearTimeout(geocodeTimer);
         geocodeTimer = null;
+        if (currentPosition) setCurrentMarkerVisible(true);
     }
 
     function beginCapture() {
         const position = currentPosition
-            ? { lat: currentPosition.coords.latitude, lng: currentPosition.coords.longitude }
+            ? new google.maps.LatLng(currentPosition.coords.latitude, currentPosition.coords.longitude)
             : map.getCenter();
         if (captureMarker) {
             captureMarker.setMap(null);
@@ -599,9 +628,15 @@ window.scoutConfig = {
         shellEl.classList.add('is-capturing');
         document.body.classList.add('scout-capture-open');
         updateCaptureLayout();
-        map.panTo(position);
-        requestAnimationFrame(() => updateCaptureFromPin(0));
-        setStatus('Move the map until the pin is on the house. The address updates below.', 'info');
+        setCurrentMarkerVisible(false);
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                updateCaptureLayout();
+                panMapSoPinTipIsAt(position);
+                updateCaptureFromPin(0);
+            });
+        });
+        setStatus('Move the red pin from your current location onto the house. The address updates below.', 'info');
     }
 
     async function submitCapture(event) {
