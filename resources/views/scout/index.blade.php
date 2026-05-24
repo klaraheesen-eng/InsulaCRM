@@ -169,6 +169,7 @@
 @section('content')
 <div class="scout-shell">
     <div id="scout-map"></div>
+    <video id="scout-keep-awake" playsinline webkit-playsinline muted loop aria-hidden="true" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;"></video>
     <div id="capture-center-pin" class="capture-center-pin" aria-hidden="true"></div>
 
     <div class="scout-status">
@@ -257,6 +258,11 @@ window.scoutConfig = {
     let geocodeRequestId = 0;
     let watchId = null;
     let trackingTimer = null;
+    let wakeLock = null;
+    let keepAwakeWanted = false;
+    let keepAwakeCanvas = null;
+    let keepAwakeStream = null;
+    let keepAwakeTick = null;
     let sessionId = null;
     let lastPointId = null;
     let tracking = false;
@@ -271,6 +277,7 @@ window.scoutConfig = {
     const stopBtn = document.getElementById('stop-scouting');
     const captureBtn = document.getElementById('capture-house');
     const centerBtn = document.getElementById('center-me');
+    const keepAwakeVideo = document.getElementById('scout-keep-awake');
     const sheet = document.getElementById('capture-sheet');
     const submitBtn = document.getElementById('submit-capture');
     const cancelBtn = document.getElementById('cancel-capture');
@@ -350,6 +357,64 @@ window.scoutConfig = {
             }
             return response.json();
         });
+    }
+
+    async function requestScreenWakeLock() {
+        if (!keepAwakeWanted || !('wakeLock' in navigator)) return;
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
+        } catch (error) {
+            wakeLock = null;
+        }
+    }
+
+    function startVideoKeepAwake() {
+        if (!keepAwakeVideo || keepAwakeStream || !HTMLCanvasElement.prototype.captureStream) return;
+        try {
+            keepAwakeCanvas = document.createElement('canvas');
+            keepAwakeCanvas.width = 2;
+            keepAwakeCanvas.height = 2;
+            const ctx = keepAwakeCanvas.getContext('2d');
+            let frame = 0;
+            const drawFrame = () => {
+                ctx.fillStyle = frame % 2 ? '#000001' : '#000000';
+                ctx.fillRect(0, 0, 2, 2);
+                frame += 1;
+            };
+            drawFrame();
+            keepAwakeTick = setInterval(drawFrame, 15000);
+            keepAwakeStream = keepAwakeCanvas.captureStream(1);
+            keepAwakeVideo.srcObject = keepAwakeStream;
+            keepAwakeVideo.muted = true;
+            keepAwakeVideo.playsInline = true;
+            keepAwakeVideo.play().catch(() => {});
+        } catch (error) {
+            keepAwakeStream = null;
+        }
+    }
+
+    function acquireKeepAwake() {
+        keepAwakeWanted = true;
+        requestScreenWakeLock();
+        startVideoKeepAwake();
+    }
+
+    function releaseKeepAwake() {
+        keepAwakeWanted = false;
+        if (wakeLock) {
+            wakeLock.release().catch(() => {});
+            wakeLock = null;
+        }
+        if (keepAwakeTick) clearInterval(keepAwakeTick);
+        keepAwakeTick = null;
+        if (keepAwakeStream) keepAwakeStream.getTracks().forEach(track => track.stop());
+        keepAwakeStream = null;
+        keepAwakeCanvas = null;
+        if (keepAwakeVideo) {
+            keepAwakeVideo.pause();
+            keepAwakeVideo.srcObject = null;
+        }
     }
 
     function drawExisting() {
@@ -526,12 +591,22 @@ window.scoutConfig = {
     }
 
     async function startTracking() {
+        acquireKeepAwake();
         if (!currentPosition) {
             setStatus('Waiting for your location before starting…');
             await requestLocation({ centerOnSuccess: true });
-            if (!currentPosition) return;
+            if (!currentPosition) {
+                releaseKeepAwake();
+                return;
+            }
         }
-        const res = await authFetch(window.scoutConfig.routes.session, { method: 'POST' });
+        let res;
+        try {
+            res = await authFetch(window.scoutConfig.routes.session, { method: 'POST' });
+        } catch (error) {
+            releaseKeepAwake();
+            throw error;
+        }
         sessionId = res.session_id;
         tracking = true;
         startBtn.disabled = true;
@@ -551,6 +626,7 @@ window.scoutConfig = {
 
     function stopTracking() {
         tracking = false;
+        releaseKeepAwake();
         if (trackingTimer) clearInterval(trackingTimer);
         trackingTimer = null;
         startBtn.disabled = false;
@@ -778,6 +854,13 @@ window.scoutConfig = {
     captureBtn.addEventListener('click', beginCapture);
     document.getElementById('cancel-capture').addEventListener('click', closeCapture);
     window.addEventListener('resize', updateCaptureLayout);
+    window.addEventListener('pagehide', releaseKeepAwake);
+    window.addEventListener('beforeunload', releaseKeepAwake);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && tracking) {
+            acquireKeepAwake();
+        }
+    });
     sheet.addEventListener('submit', event => submitCapture(event).catch(err => setStatus('Could not create lead: ' + err.message, 'danger')));
 })();
 </script>
