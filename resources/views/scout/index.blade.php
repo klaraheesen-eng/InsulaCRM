@@ -554,7 +554,7 @@ window.scoutConfig = {
         const target = latLng instanceof google.maps.LatLng ? latLng : new google.maps.LatLng(latLng.lat, latLng.lng);
 
         if (!projection || !centerPinEl.classList.contains('show')) {
-            map.panTo(target);
+            map.setCenter(target);
             return;
         }
 
@@ -562,11 +562,11 @@ window.scoutConfig = {
         const targetPixel = projection.fromLatLngToContainerPixel(target);
         const centerPixel = projection.fromLatLngToContainerPixel(map.getCenter());
         const newCenter = projection.fromContainerPixelToLatLng(new google.maps.Point(
-            centerPixel.x + (pinTip.x - targetPixel.x),
-            centerPixel.y + (pinTip.y - targetPixel.y)
+            centerPixel.x + (targetPixel.x - pinTip.x),
+            centerPixel.y + (targetPixel.y - pinTip.y)
         ));
 
-        map.panTo(newCenter || target);
+        map.setCenter(newCenter || target);
     }
 
     function setCurrentMarkerVisible(visible) {
