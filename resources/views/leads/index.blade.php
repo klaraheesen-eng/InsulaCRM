@@ -180,10 +180,11 @@
                     <td class="text-secondary">{{ $lead->id }}</td>
                     <td class="text-secondary">{{ $lead->created_at->format('M d, Y') }}</td>
                     <td>
-                        @php
-                            $tempColors = ['hot' => 'bg-red-lt', 'warm' => 'bg-yellow-lt', 'cold' => 'bg-azure-lt'];
-                        @endphp
-                        <span class="badge {{ $tempColors[$lead->temperature] ?? 'bg-secondary-lt' }}">@if($lead->temperature === 'hot')<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12c2-2.96 0-7-1-8 0 3.038-1.773 4.741-3 6-1.226 1.26-2 3.24-2 5a6 6 0 1 0 12 0c0-1.532-1.056-3.94-2-5-1.786 3-2.791 3-4 2z"/></svg>@elseif($lead->temperature === 'warm')<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="4"/><path d="M3 12h1m8-9v1m8 8h1m-9 8v1m-6.4-15.4l.7.7m12.1-.7l-.7.7m0 11.4l.7.7m-12.1-.7l-.7.7"/></svg>@elseif($lead->temperature === 'cold')<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm" width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 4l2 1l2-1"/><path d="M12 2v6.5l3 1.72"/><path d="M17.928 6.268l.134 2.232l1.866 1.232"/><path d="M20.66 7l-5.629 3.25l.01 3.458"/><path d="M19.928 14.268l-1.866 1.232l-.134 2.232"/><path d="M20.66 17l-5.629-3.25l-2.99 1.738"/><path d="M14 20l-2-1l-2 1"/><path d="M12 22v-6.5l-3-1.72"/><path d="M6.072 17.732l-.134-2.232l-1.866-1.232"/><path d="M3.34 17l5.629-3.25l-.01-3.458"/><path d="M4.072 9.732l1.866-1.232l.134-2.232"/><path d="M3.34 7l5.629 3.25l2.99-1.738"/></svg>@endif {{ __(ucfirst($lead->temperature)) }}</span>
+                        <select class="form-select form-select-sm temperature-select" data-lead-id="{{ $lead->id }}" aria-label="{{ __('Temperature for') }} {{ $lead->full_name }}" style="width: auto; min-width: 100px;">
+                            @foreach(['hot' => __('Hot'), 'warm' => __('Warm'), 'cold' => __('Cold')] as $val => $label)
+                                <option value="{{ $val }}" {{ $lead->temperature === $val ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
                     </td>
                     <td>
                         <a href="{{ route('leads.show', $lead) }}">{{ $lead->full_name }}</a>
@@ -416,7 +417,6 @@ document.querySelectorAll('.status-select').forEach(function(select) {
     select.addEventListener('change', function() {
         var leadId = this.dataset.leadId;
         var status = this.value;
-        var selectEl = this;
         fetch('{{ url("/leads") }}/' + leadId + '/status', {
             method: 'PATCH',
             headers: csrfHeaders(),
@@ -426,6 +426,26 @@ document.querySelectorAll('.status-select').forEach(function(select) {
                 showToast('{{ __("Status updated successfully.") }}', 'success');
             } else if (!handleExpiredSession(r)) {
                 showToast('{{ __("Failed to update status.") }}', 'error');
+            }
+        }).catch(function() {
+            showToast('{{ __("Network error. Please try again.") }}', 'error');
+        });
+    });
+});
+
+document.querySelectorAll('.temperature-select').forEach(function(select) {
+    select.addEventListener('change', function() {
+        var leadId = this.dataset.leadId;
+        var temperature = this.value;
+        fetch('{{ url("/leads") }}/' + leadId + '/temperature', {
+            method: 'PATCH',
+            headers: csrfHeaders(),
+            body: JSON.stringify({ temperature: temperature })
+        }).then(function(r) {
+            if (r.ok) {
+                showToast('{{ __("Temperature updated successfully.") }}', 'success');
+            } else if (!handleExpiredSession(r)) {
+                showToast('{{ __("Failed to update temperature.") }}', 'error');
             }
         }).catch(function() {
             showToast('{{ __("Network error. Please try again.") }}', 'error');

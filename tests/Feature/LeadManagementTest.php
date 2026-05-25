@@ -100,6 +100,19 @@ class LeadManagementTest extends TestCase
         $this->assertEquals('contacting', $lead->fresh()->status);
     }
 
+    public function test_admin_can_update_lead_temperature_via_ajax(): void
+    {
+        $this->actingAsAdmin();
+        $lead = $this->createLead(['temperature' => 'cold']);
+
+        $response = $this->patch("/leads/{$lead->id}/temperature", [
+            'temperature' => 'hot',
+        ]);
+
+        $response->assertJson(['success' => true]);
+        $this->assertEquals('hot', $lead->fresh()->temperature);
+    }
+
     public function test_lead_index_filters_by_status(): void
     {
         $this->actingAsAdmin();

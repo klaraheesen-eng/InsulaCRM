@@ -471,6 +471,27 @@ class LeadController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function updateTemperature(Request $request, Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        $request->validate([
+            'temperature' => 'required|in:hot,warm,cold',
+        ]);
+
+        $lead->update(['temperature' => $request->temperature]);
+
+        \App\Services\WebhookService::dispatch('lead.updated', [
+            'lead_id' => $lead->id,
+            'first_name' => $lead->first_name,
+            'last_name' => $lead->last_name,
+            'status' => $lead->status,
+            'temperature' => $lead->temperature,
+        ], auth()->user()->tenant_id);
+
+        return response()->json(['success' => true]);
+    }
+
     public function updateCustomField(Request $request, Lead $lead)
     {
         $this->authorize('update', $lead);

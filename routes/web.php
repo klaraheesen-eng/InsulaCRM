@@ -267,6 +267,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::resource('leads', LeadController::class);
         Route::post('/leads/{lead}/transaction', [LeadController::class, 'createTransaction'])->name('leads.createTransaction');
         Route::patch('/leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.updateStatus');
+        Route::patch('/leads/{lead}/temperature', [LeadController::class, 'updateTemperature'])->name('leads.updateTemperature');
         Route::patch('/leads/{lead}/custom-field', [LeadController::class, 'updateCustomField'])->name('leads.updateCustomField');
         Route::post('/leads/{lead}/claim', [LeadController::class, 'claim'])->name('leads.claim');
         Route::post('/leads/{lead}/office-lookup-whatsapp', [LeadController::class, 'officeLookupWhatsApp'])->name('leads.officeLookupWhatsApp');
