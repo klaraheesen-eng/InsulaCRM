@@ -62,7 +62,7 @@
         <form method="GET" action="{{ route('leads.index') }}" class="row g-2">
             <div class="col-md-3">
                 <label for="filter-search" class="visually-hidden">{{ __('Search') }}</label>
-                <input type="text" name="search" id="filter-search" class="form-control" placeholder="{{ __('Search name, phone, email...') }}" value="{{ request('search') }}">
+                <input type="text" name="search" id="filter-search" class="form-control" placeholder="{{ __('Search name, phone, email, address...') }}" value="{{ request('search') }}">
             </div>
             <div class="col-md-2">
                 <label for="filter-source" class="visually-hidden">{{ __('Lead Source') }}</label>

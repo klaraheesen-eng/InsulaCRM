@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Lead;
+use App\Models\Property;
 use Tests\TestCase;
 
 class LeadManagementTest extends TestCase
@@ -116,6 +117,35 @@ class LeadManagementTest extends TestCase
 
         $response = $this->get('/leads?search=UniqueTestName');
         $response->assertStatus(200);
+    }
+
+    public function test_lead_index_search_matches_property_address(): void
+    {
+        $this->actingAsAdmin();
+        $matchingLead = $this->createLead(['first_name' => 'AddressMatch']);
+        $nonMatchingLead = $this->createLead(['first_name' => 'OtherLead']);
+
+        Property::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'lead_id' => $matchingLead->id,
+            'address' => '245 Unique Ridge Road',
+            'city' => 'Pretoria',
+            'state' => 'Gauteng',
+        ]);
+
+        Property::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'lead_id' => $nonMatchingLead->id,
+            'address' => '10 Plain Street',
+            'city' => 'Pretoria',
+            'state' => 'Gauteng',
+        ]);
+
+        $response = $this->get('/leads?search=Unique+Ridge');
+
+        $response->assertStatus(200);
+        $response->assertSee('AddressMatch');
+        $response->assertDontSee('OtherLead');
     }
 
     public function test_agent_only_sees_own_leads(): void

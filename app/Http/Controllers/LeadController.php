@@ -44,7 +44,13 @@ class LeadController extends Controller
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('secondary_phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhereHas('property', function ($propertyQuery) use ($search) {
+                      $propertyQuery->where('address', 'like', "%{$search}%")
+                          ->orWhere('city', 'like', "%{$search}%")
+                          ->orWhere('state', 'like', "%{$search}%")
+                          ->orWhere('zip_code', 'like', "%{$search}%");
+                  });
             });
         }
 
