@@ -383,6 +383,35 @@ function showToast(message, type) {
     el.addEventListener('hidden.bs.toast', function() { el.remove(); });
 }
 
+function getCookie(name) {
+    var value = '; ' + document.cookie;
+    var parts = value.split('; ' + name + '=');
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+}
+
+function csrfHeaders() {
+    var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    };
+    var xsrfCookie = getCookie('XSRF-TOKEN');
+    if (xsrfCookie) {
+        headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfCookie);
+    } else {
+        headers['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+    return headers;
+}
+
+function handleExpiredSession(response) {
+    if (response.status === 419) {
+        showToast('{{ __("Session refreshed. Please try saving again.") }}', 'error');
+        return true;
+    }
+    return false;
+}
+
 document.querySelectorAll('.status-select').forEach(function(select) {
     select.addEventListener('change', function() {
         var leadId = this.dataset.leadId;
@@ -390,16 +419,12 @@ document.querySelectorAll('.status-select').forEach(function(select) {
         var selectEl = this;
         fetch('{{ url("/leads") }}/' + leadId + '/status', {
             method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json',
-            },
+            headers: csrfHeaders(),
             body: JSON.stringify({ status: status })
         }).then(function(r) {
             if (r.ok) {
                 showToast('{{ __("Status updated successfully.") }}', 'success');
-            } else {
+            } else if (!handleExpiredSession(r)) {
                 showToast('{{ __("Failed to update status.") }}', 'error');
             }
         }).catch(function() {
@@ -416,11 +441,7 @@ function saveLeadCustomField(input) {
 
     fetch('{{ url("/leads") }}/' + leadId + '/custom-field', {
         method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json',
-        },
+        headers: csrfHeaders(),
         body: JSON.stringify({ field: field, value: value })
     }).then(function(r) {
         input.classList.remove('is-saving');
@@ -430,7 +451,9 @@ function saveLeadCustomField(input) {
             setTimeout(function() { input.classList.remove('is-valid'); }, 1200);
         } else {
             input.classList.add('is-invalid');
-            showToast('{{ __("Failed to save lead column.") }}', 'error');
+            if (!handleExpiredSession(r)) {
+                showToast('{{ __("Failed to save lead column.") }}', 'error');
+            }
         }
     }).catch(function() {
         input.classList.remove('is-saving');
