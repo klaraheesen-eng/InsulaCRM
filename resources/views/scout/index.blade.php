@@ -92,6 +92,29 @@
         grid-template-columns: 1fr 1fr;
         gap: 8px;
     }
+    #voice-note {
+        min-height: 74px;
+        border: 0;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #f97316, #dc2626);
+        color: #fff;
+        font-size: clamp(1.1rem, 4.8vw, 1.45rem);
+        font-weight: 900;
+        letter-spacing: .01em;
+        box-shadow: 0 12px 28px rgba(127, 29, 29, .4);
+    }
+    #voice-note.is-recording {
+        background: linear-gradient(135deg, #991b1b, #450a0a);
+        animation: voice-pulse 1s ease-in-out infinite alternate;
+    }
+    #voice-note:disabled {
+        opacity: .72;
+        box-shadow: none;
+    }
+    @keyframes voice-pulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.015); }
+    }
     .scout-toolbar-row .btn {
         min-height: 46px;
         font-size: clamp(0.8rem, 3.2vw, 1rem);
@@ -197,6 +220,9 @@
         <button type="button" id="capture-house" class="btn btn-primary btn-lg w-100" disabled>
             {{ __('House For Sale') }}
         </button>
+        <button type="button" id="voice-note" class="btn btn-lg w-100" disabled>
+            🎙️ {{ __('Voice Note') }}
+        </button>
         <div class="scout-toolbar-row">
             <button type="button" id="center-me" class="btn" aria-pressed="false">
                 {{ __('Center') }}
@@ -244,6 +270,7 @@ window.scoutConfig = {
     routes: {
         session: @json(route('scout.session')),
         point: @json(route('scout.points.store')),
+        voiceNote: @json(route('scout.voiceNotes.store')),
         capture: @json(route('scout.captureLead')),
         reverseGeocode: @json(route('scout.reverseGeocode')),
     },
@@ -251,6 +278,7 @@ window.scoutConfig = {
     existingPoints: @json($existingPoints),
     existingCaptures: @json($existingCaptures),
     existingProperties: @json($existingProperties),
+    existingVoiceNotes: @json($existingVoiceNotes),
 };
 
 (function () {
@@ -281,6 +309,12 @@ window.scoutConfig = {
     let sessionId = null;
     let lastPointId = null;
     let tracking = false;
+    let mediaRecorder = null;
+    let voiceChunks = [];
+    let voiceRecordingStartedAt = null;
+    let voiceRecordingPosition = null;
+    let voiceStream = null;
+    let voiceSaving = false;
     let followingLocation = false;
     let pendingAddressParts = {};
     const ROUTE_SAVE_MIN_METERS = 15;
@@ -292,6 +326,7 @@ window.scoutConfig = {
     const alertEl = document.getElementById('scout-alert');
     const startBtn = document.getElementById('start-scouting');
     const captureBtn = document.getElementById('capture-house');
+    const voiceBtn = document.getElementById('voice-note');
     const centerBtn = document.getElementById('center-me');
     const keepAwakeVideo = document.getElementById('scout-keep-awake');
     const sheet = document.getElementById('capture-sheet');
@@ -523,6 +558,24 @@ window.scoutConfig = {
             marker.addListener('click', () => info.open({ map, anchor: marker }));
         });
 
+        (window.scoutConfig.existingVoiceNotes || []).forEach(note => {
+            const marker = new google.maps.Marker({
+                map,
+                position: { lat: note.lat, lng: note.lng },
+                title: 'Voice note',
+                icon: voiceNoteIcon(),
+                zIndex: 875,
+            });
+            markerBounds.extend({ lat: note.lat, lng: note.lng });
+            markerCount += 1;
+            const capturedAt = note.captured_at ? new Date(note.captured_at).toLocaleString() : '';
+            const duration = note.duration_seconds ? `${note.duration_seconds}s` : '';
+            const info = new google.maps.InfoWindow({
+                content: `<strong>Voice note</strong>${capturedAt ? `<br>${capturedAt}` : ''}${duration ? `<br>${duration}` : ''}<br><audio controls src="${note.audio_url}" style="width:220px;max-width:100%"></audio>`,
+            });
+            marker.addListener('click', () => info.open({ map, anchor: marker }));
+        });
+
         if (markerCount && !currentPosition && !hasCenteredOnLocation) {
             map.fitBounds(markerBounds, 48);
             google.maps.event.addListenerOnce(map, 'idle', () => {
@@ -547,6 +600,17 @@ window.scoutConfig = {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 9,
             fillColor: '#22c55e',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 3,
+        };
+    }
+
+    function voiceNoteIcon() {
+        return {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#f97316',
             fillOpacity: 1,
             strokeColor: '#ffffff',
             strokeWeight: 3,
@@ -581,6 +645,7 @@ window.scoutConfig = {
         }
         currentMarker.setVisible(!captureMode);
         captureBtn.disabled = false;
+        voiceBtn.disabled = false;
     }
 
     const IPHONE_LOCATION_HINT = 'On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using, and turn Precise Location ON. In Safari: tap aA → Website Settings → Location → Allow, then reload.';
@@ -936,6 +1001,123 @@ window.scoutConfig = {
         }
     }
 
+    function bestVoiceMimeType() {
+        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return '';
+        return [
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/mp4',
+            'audio/mpeg',
+        ].find(type => MediaRecorder.isTypeSupported(type)) || '';
+    }
+
+    function setVoiceButtonState(label, disabled = false) {
+        voiceBtn.disabled = disabled;
+        voiceBtn.textContent = label;
+    }
+
+    async function ensureVoiceLocation() {
+        if (currentPosition) return currentPosition;
+        await requestLocation({ centerOnSuccess: true });
+        return currentPosition;
+    }
+
+    async function startVoiceNote() {
+        if (!window.MediaRecorder || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            setStatus('Voice notes are not supported in this browser. Try Safari/Chrome with HTTPS.', 'danger');
+            return;
+        }
+        if (voiceSaving) return;
+
+        const position = await ensureVoiceLocation();
+        if (!position) {
+            setStatus('Need your current location before recording a voice note.', 'warning');
+            return;
+        }
+
+        try {
+            voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceChunks = [];
+            voiceRecordingStartedAt = Date.now();
+            voiceRecordingPosition = position;
+            const mimeType = bestVoiceMimeType();
+            mediaRecorder = new MediaRecorder(voiceStream, mimeType ? { mimeType } : undefined);
+            mediaRecorder.addEventListener('dataavailable', event => {
+                if (event.data && event.data.size > 0) voiceChunks.push(event.data);
+            });
+            mediaRecorder.addEventListener('stop', () => saveVoiceNote().catch(err => {
+                voiceSaving = false;
+                setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+                setStatus('Could not save voice note: ' + err.message, 'danger');
+            }));
+            mediaRecorder.start();
+            voiceBtn.classList.add('is-recording');
+            setVoiceButtonState('⏹️ {{ __('Stop Recording') }}');
+            setStatus('Recording voice note at this location. Tap Stop when done.', 'warning');
+        } catch (error) {
+            voiceStream?.getTracks().forEach(track => track.stop());
+            voiceStream = null;
+            setStatus('Microphone is blocked or unavailable: ' + error.message, 'danger');
+        }
+    }
+
+    function stopVoiceNote() {
+        if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+        voiceSaving = true;
+        setVoiceButtonState('{{ __('Saving voice note…') }}', true);
+        mediaRecorder.stop();
+    }
+
+    async function saveVoiceNote() {
+        const stream = voiceStream;
+        voiceStream = null;
+        stream?.getTracks().forEach(track => track.stop());
+        voiceBtn.classList.remove('is-recording');
+
+        if (!voiceChunks.length || !voiceRecordingPosition) {
+            voiceSaving = false;
+            setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+            setStatus('No audio was captured. Try again and allow microphone access.', 'warning');
+            return;
+        }
+
+        const recordedMimeType = mediaRecorder?.mimeType || voiceChunks[0]?.type || 'audio/webm';
+        const durationSeconds = Math.max(1, Math.round((Date.now() - voiceRecordingStartedAt) / 1000));
+        const blob = new Blob(voiceChunks, { type: recordedMimeType });
+        const position = voiceRecordingPosition;
+        const form = new FormData();
+        form.append('session_id', sessionId || '');
+        form.append('latitude', position.coords.latitude);
+        form.append('longitude', position.coords.longitude);
+        form.append('accuracy', position.coords.accuracy || '');
+        form.append('captured_at', new Date(voiceRecordingStartedAt).toISOString());
+        form.append('duration_seconds', durationSeconds);
+        form.append('audio', blob, recordedMimeType.includes('mp4') ? 'voice-note.m4a' : 'voice-note.webm');
+
+        try {
+            const res = await authFetch(window.scoutConfig.routes.voiceNote, { method: 'POST', body: form });
+            const marker = new google.maps.Marker({
+                map,
+                position: { lat: res.lat, lng: res.lng },
+                title: 'Voice note',
+                icon: voiceNoteIcon(),
+                zIndex: 875,
+            });
+            const info = new google.maps.InfoWindow({
+                content: `<strong>Voice note</strong><br>${durationSeconds}s<br><audio controls src="${res.audio_url}" style="width:220px;max-width:100%"></audio>`,
+            });
+            marker.addListener('click', () => info.open({ map, anchor: marker }));
+            setStatus('Voice note saved at this location for later transcription.', 'success');
+        } finally {
+            voiceSaving = false;
+            mediaRecorder = null;
+            voiceChunks = [];
+            voiceRecordingStartedAt = null;
+            voiceRecordingPosition = null;
+            setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+        }
+    }
+
     window.initScoutMap = function () {
         try {
         const fallback = { lat: -25.785, lng: 28.282 };
@@ -990,9 +1172,19 @@ window.scoutConfig = {
         });
     });
     captureBtn.addEventListener('click', beginCapture);
+    voiceBtn.addEventListener('click', () => {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            stopVoiceNote();
+            return;
+        }
+        startVoiceNote().catch(err => setStatus('Could not start voice note: ' + err.message, 'danger'));
+    });
     document.getElementById('cancel-capture').addEventListener('click', closeCapture);
     window.addEventListener('resize', updateCaptureLayout);
-    window.addEventListener('pagehide', releaseKeepAwake);
+    window.addEventListener('pagehide', () => {
+        releaseKeepAwake();
+        voiceStream?.getTracks().forEach(track => track.stop());
+    });
     window.addEventListener('beforeunload', releaseKeepAwake);
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && tracking) {

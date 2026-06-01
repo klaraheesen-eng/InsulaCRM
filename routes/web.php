@@ -186,6 +186,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
     Route::get('/scout/reverse-geocode', [ScoutController::class, 'reverseGeocode'])->name('scout.reverseGeocode');
     Route::post('/scout/session', [ScoutController::class, 'startSession'])->name('scout.session');
     Route::post('/scout/points', [ScoutController::class, 'storePoint'])->name('scout.points.store');
+    Route::post('/scout/voice-notes', [ScoutController::class, 'storeVoiceNote'])->name('scout.voiceNotes.store');
     Route::post('/scout/capture-lead', [ScoutController::class, 'captureLead'])->name('scout.captureLead');
 
     // ── Global Search (all roles) ────────────────────────

@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\ScoutLeadCapture;
 use App\Models\ScoutPoint;
 use App\Models\ScoutSession;
+use App\Models\ScoutVoiceNote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -73,12 +74,29 @@ class ScoutController extends Controller
                 'lng' => (float) $property->longitude,
             ]);
 
+        $voiceNotes = ScoutVoiceNote::query()
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->latest()
+            ->limit(300)
+            ->get()
+            ->map(fn (ScoutVoiceNote $note) => [
+                'id' => $note->id,
+                'lat' => (float) $note->latitude,
+                'lng' => (float) $note->longitude,
+                'accuracy' => $note->accuracy ? (float) $note->accuracy : null,
+                'duration_seconds' => $note->duration_seconds,
+                'audio_url' => Storage::disk('public')->url($note->audio_path),
+                'captured_at' => optional($note->captured_at)->toIso8601String(),
+                'transcribed' => filled($note->transcript),
+            ]);
+
         return response()
             ->view('scout.index', [
                 'googleMapsKey' => config('services.google_maps.browser_key'),
                 'existingPoints' => $points,
                 'existingCaptures' => $captures,
                 'existingProperties' => $properties,
+                'existingVoiceNotes' => $voiceNotes,
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
@@ -157,6 +175,52 @@ class ScoutController extends Controller
             'previous_point_id' => $point->previous_point_id,
             'lat' => (float) $point->latitude,
             'lng' => (float) $point->longitude,
+        ]);
+    }
+
+    public function storeVoiceNote(Request $request)
+    {
+        $data = $request->validate([
+            'session_id' => 'nullable|integer|exists:scout_sessions,id',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0|max:99999',
+            'captured_at' => 'nullable|date',
+            'duration_seconds' => 'nullable|integer|min:0|max:3600',
+            'audio' => 'required|file|max:30720',
+        ]);
+
+        $file = $request->file('audio');
+        $extension = match ($file->getMimeType()) {
+            'audio/webm', 'video/webm' => 'webm',
+            'audio/mp4', 'video/mp4' => 'm4a',
+            'audio/mpeg' => 'mp3',
+            'audio/wav', 'audio/x-wav' => 'wav',
+            default => $file->getClientOriginalExtension() ?: 'webm',
+        };
+        $filename = 'scout_voice_' . Str::uuid() . '.' . $extension;
+        $path = $file->storeAs('scout-voice-notes/' . now()->format('Y/m'), $filename, 'public');
+
+        $note = ScoutVoiceNote::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'scout_session_id' => $data['session_id'] ?? null,
+            'user_id' => auth()->id(),
+            'latitude' => $data['latitude'],
+            'longitude' => $data['longitude'],
+            'accuracy' => $data['accuracy'] ?? null,
+            'audio_path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+            'duration_seconds' => $data['duration_seconds'] ?? null,
+            'captured_at' => isset($data['captured_at']) ? \Carbon\Carbon::parse($data['captured_at']) : now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $note->id,
+            'lat' => (float) $note->latitude,
+            'lng' => (float) $note->longitude,
+            'audio_url' => Storage::disk('public')->url($note->audio_path),
         ]);
     }
 
