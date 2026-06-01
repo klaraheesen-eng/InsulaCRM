@@ -142,6 +142,29 @@
     .scout-status .alert.alert-success { background: rgba(22, 101, 52, .94); }
     .scout-status .alert.alert-danger { background: rgba(153, 27, 27, .96); }
     .scout-status .alert.alert-warning { background: rgba(146, 64, 14, .96); }
+    .gm-style .gm-style-iw-c,
+    .gm-style .gm-style-iw-d,
+    .gm-style .gm-style-iw-chr {
+        background: #fff !important;
+        color: #111827 !important;
+    }
+    .gm-style .gm-style-iw-c *,
+    .gm-style .gm-style-iw-d * {
+        color: #111827 !important;
+        text-shadow: none !important;
+    }
+    .gm-style .gm-style-iw-c a,
+    .gm-style .gm-style-iw-d a {
+        color: #2563eb !important;
+        font-weight: 700;
+    }
+    .gm-style .gm-ui-hover-effect {
+        opacity: 1 !important;
+        filter: none !important;
+    }
+    .gm-style .gm-ui-hover-effect span {
+        background-color: #111827 !important;
+    }
     #center-me {
         background: rgba(255,255,255,.96);
         color: #0f172a;
