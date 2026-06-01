@@ -220,7 +220,7 @@
         <button type="button" id="capture-house" class="btn btn-primary btn-lg w-100" disabled>
             {{ __('House For Sale') }}
         </button>
-        <button type="button" id="voice-note" class="btn btn-lg w-100" disabled>
+        <button type="button" id="voice-note" class="btn btn-lg w-100">
             🎙️ {{ __('Voice Note') }}
         </button>
         <div class="scout-toolbar-row">
@@ -1029,14 +1029,19 @@ window.scoutConfig = {
         }
         if (voiceSaving) return;
 
-        const position = await ensureVoiceLocation();
-        if (!position) {
-            setStatus('Need your current location before recording a voice note.', 'warning');
-            return;
-        }
-
         try {
+            setVoiceButtonState('{{ __('Preparing recorder…') }}', true);
             voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            const position = await ensureVoiceLocation();
+            if (!position) {
+                voiceStream?.getTracks().forEach(track => track.stop());
+                voiceStream = null;
+                setVoiceButtonState('🎙️ {{ __('Voice Note') }}');
+                setStatus('Need your current location before recording a voice note.', 'warning');
+                return;
+            }
+
             voiceChunks = [];
             voiceRecordingStartedAt = Date.now();
             voiceRecordingPosition = position;
@@ -1047,7 +1052,7 @@ window.scoutConfig = {
             });
             mediaRecorder.addEventListener('stop', () => saveVoiceNote().catch(err => {
                 voiceSaving = false;
-                setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+                setVoiceButtonState('🎙️ {{ __('Voice Note') }}');
                 setStatus('Could not save voice note: ' + err.message, 'danger');
             }));
             mediaRecorder.start();
@@ -1057,6 +1062,7 @@ window.scoutConfig = {
         } catch (error) {
             voiceStream?.getTracks().forEach(track => track.stop());
             voiceStream = null;
+            setVoiceButtonState('🎙️ {{ __('Voice Note') }}');
             setStatus('Microphone is blocked or unavailable: ' + error.message, 'danger');
         }
     }
@@ -1076,7 +1082,7 @@ window.scoutConfig = {
 
         if (!voiceChunks.length || !voiceRecordingPosition) {
             voiceSaving = false;
-            setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+            setVoiceButtonState('🎙️ {{ __('Voice Note') }}');
             setStatus('No audio was captured. Try again and allow microphone access.', 'warning');
             return;
         }
@@ -1114,7 +1120,7 @@ window.scoutConfig = {
             voiceChunks = [];
             voiceRecordingStartedAt = null;
             voiceRecordingPosition = null;
-            setVoiceButtonState('🎙️ {{ __('Voice Note') }}', !currentPosition);
+            setVoiceButtonState('🎙️ {{ __('Voice Note') }}');
         }
     }
 
